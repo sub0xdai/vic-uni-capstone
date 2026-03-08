@@ -1,0 +1,12 @@
+# Archive (reference materials, build workspace, session notes)
+archive/
+
+# Speaker notes (private prep, not for repo)
+speaker-notes.md
+
+# LibreOffice lock files
+.~lock.*
+
+# Claude Code
+CLAUDE.md
+.claude/
