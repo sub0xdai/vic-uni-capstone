@@ -7,6 +7,9 @@ speaker-notes.md
 # LibreOffice lock files
 .~lock.*
 
+# Devlog (private)
+devlog.md
+
 # Claude Code
 CLAUDE.md
 .claude/
