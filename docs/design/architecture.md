@@ -163,6 +163,41 @@ After that conversion the code trusts the types.
 Downstream there are no truthiness guards and no optional chaining on already-parsed data.
 One conversion point, then the type system carries the invariant.
 
+`parseContentType`, `parseBrandTone`, `parseRating` and `parseGenerationRequest` are the boundary parsers.
+Each returns a `Result`, so a malformed request produces a value the caller must handle rather than a thrown exception.
+
+### 3.11 An invariant layer instead of non-null assertions
+
+`lib/assert.ts` provides `invariant`, which narrows types through TypeScript's `asserts` signature and throws `InvariantError` when a condition fails.
+`lib/env.ts` builds on it to replace the non-null assertions that were previously used on environment variables.
+
+```ts
+process.env.NEXT_PUBLIC_SUPABASE_URL!   // before: undefined at runtime
+requireEnv("NEXT_PUBLIC_SUPABASE_URL")  // after: MissingEnvError naming the variable
+```
+
+The distinction between an invariant and a `Result` is deliberate, because the two are not interchangeable.
+A `Result` covers an expected failure the caller can branch on, such as a malformed request or an upstream timeout.
+An invariant covers a condition that cannot hold if the program is correct, such as a metric outside its range or a missing deployment variable.
+When an invariant fails there is no recovery path, so execution stops with a message naming the condition instead of continuing with a bad value.
+
+Assertions sit where a violation is possible: the proxy, the environment loader, the Supabase clients, the scoring functions and the rating control.
+Pure presentational components have none, because they hold no state that can violate anything.
+
+Rejected: a dedicated assertion library, and an error type per subsystem.
+`InvariantError` and `MissingEnvError` are the only two error types, and both carry the offending detail as a field.
+
+### 3.12 Determinism and the generation record
+
+Model output is not reproducible, because generation runs at a non-zero temperature.
+Requirements that depend on comparing generations therefore depend on recording what produced each one.
+
+Every row in `generated_content` stores the model, the temperature, the system prompt and the user prompt alongside the content and its scores.
+The full prompt text is stored rather than a hash, because the evaluation work needs to inspect what was actually sent.
+
+This follows from the principle that a result that cannot be reproduced cannot be defended.
+The cost is four columns now against a migration later.
+
 ## 4. Rejected approaches
 
 Recorded so the decision is visible as a decision rather than an omission.

@@ -23,8 +23,13 @@ create table generated_content (
   content_text text not null,
   rating smallint,
   analysis jsonb,
+  model text not null,
+  temperature numeric not null,
+  system_prompt text not null,
+  user_prompt text not null,
   created_at timestamptz not null default now(),
-  constraint generated_content_rating_range check (rating is null or rating between 1 and 5)
+  constraint generated_content_rating_range check (rating is null or rating between 1 and 5),
+  constraint generated_content_temperature_range check (temperature >= 0 and temperature <= 2)
 );
 
 create index generated_content_user_created_idx

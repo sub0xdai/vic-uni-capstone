@@ -1,4 +1,4 @@
-import type { BusinessProfile, ContentType, Result } from "@/lib/types";
+import type { BusinessProfile, ContentType, Result } from "./types.ts";
 
 export type PromptInput = {
   contentType: ContentType;

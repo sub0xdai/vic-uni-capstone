@@ -46,6 +46,12 @@ const DRAFT: Draft = {
   ].join("\n"),
   rating: 4,
   analysis: ANALYSIS,
+  parameters: {
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    systemPrompt: "You are a marketing content specialist for a small business.",
+    userPrompt: "Write a social caption about the single origin Ethiopian launch.",
+  },
   createdAt: new Date("2026-10-02T09:00:00Z").toISOString(),
 };
 

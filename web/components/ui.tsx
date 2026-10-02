@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { invariant } from "@/lib/assert";
+import { RATING_MAX, RATING_MIN, isRating } from "@/lib/types";
 
 export const controlClass = [
   "w-full rounded-lg border border-black/15 bg-white px-3 py-2",
@@ -86,6 +88,9 @@ export function Stars({
   value: number | null;
   onChange?: (next: number) => void;
 }) {
+  invariant(value === null || isRating(value), `rating out of range: ${String(value)}`);
+  invariant(RATING_MAX - RATING_MIN === 4, "rating scale is not five stars");
+
   return (
     <div className="flex gap-1" role="group" aria-label="Content rating">
       {[1, 2, 3, 4, 5].map((n) => (
