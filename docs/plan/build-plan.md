@@ -287,7 +287,7 @@ This card is the visible part only.
 
 **Picture**
 
-![Login screen](https://raw.githubusercontent.com/sub0xdai/vic-uni-capstone/master/docs/assets/media/image5.png)
+[Login screen](https://github.com/sub0xdai/vic-uni-capstone/blob/master/docs/assets/media/image5.png)
 
 **Finished when**, on `/preview`:
 
@@ -340,7 +340,7 @@ The user picks what kind of content to make and what it should be about.
 
 **Picture** Look at the left column.
 
-![Content generator screen](https://raw.githubusercontent.com/sub0xdai/vic-uni-capstone/master/docs/assets/media/image3.png)
+[Content generator screen](https://github.com/sub0xdai/vic-uni-capstone/blob/master/docs/assets/media/image3.png)
 
 **Finished when**, on `/preview`:
 
@@ -360,7 +360,7 @@ The generated text appears here, and the user can change it, copy it and rate it
 
 **Picture** Look at the right column of the same screen.
 
-![Content generator screen](https://raw.githubusercontent.com/sub0xdai/vic-uni-capstone/master/docs/assets/media/image3.png)
+[Content generator screen](https://github.com/sub0xdai/vic-uni-capstone/blob/master/docs/assets/media/image3.png)
 
 **Finished when**, on `/preview`:
 
@@ -377,7 +377,7 @@ The list of everything the user has generated before.
 
 **Picture**
 
-![Dashboard screen](https://raw.githubusercontent.com/sub0xdai/vic-uni-capstone/master/docs/assets/media/image8.png)
+[Dashboard screen](https://github.com/sub0xdai/vic-uni-capstone/blob/master/docs/assets/media/image8.png)
 
 **Finished when**, on `/preview`:
 
