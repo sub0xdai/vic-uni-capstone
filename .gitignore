@@ -16,3 +16,5 @@ CLAUDE.md
 
 # Generated proposal docx (build output)
 docs/dist/
+
+.env
