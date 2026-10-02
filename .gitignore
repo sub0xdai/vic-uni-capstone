@@ -13,3 +13,6 @@ devlog.md
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Generated proposal docx (build output)
+docs/dist/
