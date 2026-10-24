@@ -106,6 +106,19 @@ export default function DashboardPage() {
       setProfiles(profiles.filter((p) => p.id !== id))
     }
   }
+  async function handleRate(id: number, rating: number) {
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({ rating })
+      .eq('id', id)
+      .select()
+
+    if (error || !data || data.length === 0) {
+      setMessage('Could not save rating.' + (error ? ' ' + error.message : ''))
+    } else {
+      setContents(contents.map((c) => (c.id === id ? { ...c, rating } : c)))
+    }
+  }
 
   async function handleDeleteContent(id: number) {
     const { error } = await supabase.from('generated_content').delete().eq('id', id)
@@ -180,7 +193,15 @@ export default function DashboardPage() {
           <ScoreBar label="Keywords" value={c.analysis_json?.keywordScore} />
 
           <p style={{ marginTop: '10px' }}>
-            {'★'.repeat(c.rating ?? 0) + '☆'.repeat(5 - (c.rating ?? 0))}
+            {[1, 2, 3, 4, 5].map((n) => (
+              <span
+                key={n}
+                onClick={() => handleRate(c.id, n)}
+                style={{ cursor: 'pointer', fontSize: '22px', color: n <= (c.rating ?? 0) ? '#fc4' : '#666' }}
+              >
+                {n <= (c.rating ?? 0) ? '★' : '☆'}
+              </span>
+            ))}
           </p>
           <p><small>Created: {new Date(c.created_at).toLocaleString()}</small></p>
 
