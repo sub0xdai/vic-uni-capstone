@@ -1,115 +1,181 @@
-'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+"use client";
 
-type Profile = {
-  id: number
-  business_name: string
-  industry: string
-  description: string
-  target_audience: string
-  brand_tone: string
-  created_at: string
-}
+import { useState } from "react";
 
-export default function DashboardPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(true)
+export default function Home() {
+  const [businessName, setBusinessName] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [tone, setTone] = useState("Friendly and professional");
+  const [contentType, setContentType] = useState("Instagram post");
+  const [content, setContent] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchProfiles()
-  }, [])
+  async function generateContent(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setContent("");
 
-async function handleSignOut() {
-  await supabase.auth.signOut()
-  window.location.href = '/login'
-}
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName,
+          industry,
+          targetAudience,
+          tone,
+          contentType,
+        }),
+      });
 
-  async function fetchProfiles() {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+      const data = await response.json();
 
-    if (!user) {
-      setMessage('You must be logged in to view your dashboard.')
-      setLoading(false)
-      return
-    }
+      if (!response.ok) {
+        throw new Error(data.error || "Content generation failed.");
+      }
 
-    const { data, error } = await supabase
-      .from('business_profile')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      setMessage('Error loading profiles: ' + error.message)
-    } else {
-      setProfiles(data as Profile[])
-    }
-    setLoading(false)
-  }
-
-  async function handleDelete(id: number) {
-    const { error } = await supabase.from('business_profile').delete().eq('id', id)
-    if (error) {
-      setMessage('Error deleting: ' + error.message)
-    } else {
-      setProfiles(profiles.filter((p) => p.id !== id))
+      setContent(data.content || "No content was returned.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: '700px', margin: '40px auto', padding: '20px', color: 'white' }}>
-      <h1>Dashboard</h1>
-      
-      <button
-  onClick={handleSignOut}
-  style={{ padding: '6px 14px', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer', marginBottom: '20px' }}
->
-  Sign Out
-</button>
+    <main className="min-h-screen bg-gray-50 px-4 py-10 text-gray-900">
+      <div className="mx-auto max-w-3xl">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-bold">
+            AI Marketing Content Generator
+          </h1>
+          <p className="mt-3 text-gray-600">
+            Create marketing content for your small business using Gemini AI.
+          </p>
+        </header>
 
-      <p style={{ marginBottom: '20px' }}>
-  <a href="/profile" style={{ color: '#4af' }}>Edit Business Profile</a>
-</p>
-      
-
-      {loading && <p>Loading...</p>}
-      {message && <p>{message}</p>}
-
-      {!loading && profiles.length === 0 && !message && (
-        <p>No saved profiles yet.</p>
-      )}
-
-      {profiles.map((profile) => (
-        <div
-          key={profile.id}
-          style={{
-            border: '1px solid #444',
-            borderRadius: '6px',
-            padding: '15px',
-            marginBottom: '15px',
-            backgroundColor: '#1a1a1a',
-          }}
+        <form
+          onSubmit={generateContent}
+          className="space-y-5 rounded-xl border bg-white p-6 shadow-sm"
         >
-          <h3>{profile.business_name}</h3>
-          <p><strong>Industry:</strong> {profile.industry}</p>
-          <p><strong>Description:</strong> {profile.description}</p>
-          <p><strong>Target Audience:</strong> {profile.target_audience}</p>
-          <p><strong>Brand Tone:</strong> {profile.brand_tone}</p>
-          <p><small>Created: {new Date(profile.created_at).toLocaleString()}</small></p>
+          <div>
+            <label htmlFor="businessName" className="mb-1 block font-medium">
+              Business name *
+            </label>
+            <input
+              id="businessName"
+              required
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className="w-full rounded-lg border p-3"
+              placeholder="e.g. Harbour Coffee"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="industry" className="mb-1 block font-medium">
+              Industry *
+            </label>
+            <input
+              id="industry"
+              required
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              className="w-full rounded-lg border p-3"
+              placeholder="e.g. Cafe, retail, fitness"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="targetAudience" className="mb-1 block font-medium">
+              Target audience
+            </label>
+            <input
+              id="targetAudience"
+              value={targetAudience}
+              onChange={(e) => setTargetAudience(e.target.value)}
+              className="w-full rounded-lg border p-3"
+              placeholder="e.g. Local customers"
+            />
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="tone" className="mb-1 block font-medium">
+                Tone of voice
+              </label>
+              <select
+                id="tone"
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+                className="w-full rounded-lg border bg-white p-3"
+              >
+                <option>Friendly and professional</option>
+                <option>Fun and energetic</option>
+                <option>Formal</option>
+                <option>Persuasive</option>
+                <option>Relaxed and casual</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="contentType" className="mb-1 block font-medium">
+                Content type
+              </label>
+              <select
+                id="contentType"
+                value={contentType}
+                onChange={(e) => setContentType(e.target.value)}
+                className="w-full rounded-lg border bg-white p-3"
+              >
+                <option>Instagram post</option>
+                <option>Facebook post</option>
+                <option>Product description</option>
+                <option>Marketing email</option>
+                <option>Business advertisement</option>
+              </select>
+            </div>
+          </div>
 
           <button
-            onClick={() => handleDelete(profile.id)}
-            style={{ padding: '6px 12px', backgroundColor: '#a33', color: 'white', border: 'none', borderRadius: '4px' }}
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Delete
+            {loading ? "Generating content..." : "Generate Content"}
           </button>
-        </div>
-      ))}
-    </div>
-  )
-}
+        </form>
 
+        {error && (
+          <div role="alert" className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">
+            {error}
+          </div>
+        )}
+
+        {content && (
+          <section className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold">Generated Content</h2>
+            <div className="whitespace-pre-wrap leading-7">{content}</div>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(content)}
+              className="mt-5 rounded-lg border px-4 py-2 font-medium hover:bg-gray-50"
+            >
+              Copy content
+            </button>
+          </section>
+        )}
+
+        <p className="mt-6 text-center text-sm text-gray-500">
+          AI-generated content should be reviewed before publication.
+        </p>
+      </div>
+    </main>
+  );
+}
