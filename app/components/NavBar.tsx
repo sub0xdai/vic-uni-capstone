@@ -37,6 +37,7 @@ export default function NavBar() {
         <>
           <a href="/dashboard" style={linkStyle}>Dashboard</a>
           <a href="/profile" style={linkStyle}>Business Profile</a>
+                    <a href="/generate" style={linkStyle}>Generate</a>
           <button
             onClick={handleSignOut}
             style={{ marginLeft: 'auto', padding: '6px 14px', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}
