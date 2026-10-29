@@ -2,7 +2,8 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import { invariant } from "../assert.ts";
-import { requireEnv } from "../env.ts";
+import { MissingEnvError, requireEnv } from "../env.ts";
+import { err, ok, type Result } from "../types.ts";
 
 export function supabaseBrowser() {
   const url = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
@@ -11,4 +12,17 @@ export function supabaseBrowser() {
   invariant(key.length > 20, "supabase anon key looks truncated");
 
   return createBrowserClient(url, key);
+}
+
+export function supabaseBrowserResult(): Result<ReturnType<typeof supabaseBrowser>> {
+  try {
+    return ok(supabaseBrowser());
+  } catch (error) {
+    if (error instanceof MissingEnvError) {
+      return err(
+        `${error.variable} is not set. Copy .env.local.example to .env.local and fill it in.`,
+      );
+    }
+    throw error;
+  }
 }

@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web
 
-## Getting Started
+The ContentCraft application.
 
-First, run the development server:
+## Running it
+
+You need Node 20.9 or newer and pnpm.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.local.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | What it does |
+|---|---|
+| `/` | Sends you to `/dashboard` when signed in, otherwise to `/login` |
+| `/login` | Sign in, or create an account |
+| `/onboarding` | Create or edit the business profile |
+| `/dashboard` | Draft list with star ratings and the latest quality score |
+| `/preview` | Every component with fake data, no database and no login |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`proxy.ts` guards `/dashboard`, `/onboarding` and `/generate`.
+A signed out request goes to `/login`.
+A signed in request for `/login` goes to `/dashboard`.
 
-## Learn More
+## Checks
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm check    # typecheck, lint, tests
+pnpm build    # production build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`pnpm check` has to pass before anyone reviews your pull request.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Database
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The schema is `supabase/schema.sql`.
+Paste the whole file into the Supabase SQL editor and run it.
+The row level security policies keep one tenant from reading another tenant's rows.
