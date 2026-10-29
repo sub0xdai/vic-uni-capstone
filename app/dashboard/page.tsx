@@ -106,6 +106,7 @@ export default function DashboardPage() {
       setProfiles(profiles.filter((p) => p.id !== id))
     }
   }
+
   async function handleRate(id: number, rating: number) {
     const { data, error } = await supabase
       .from('generated_content')
@@ -117,6 +118,20 @@ export default function DashboardPage() {
       setMessage('Could not save rating.' + (error ? ' ' + error.message : ''))
     } else {
       setContents(contents.map((c) => (c.id === id ? { ...c, rating } : c)))
+    }
+  }
+
+  async function handleStatus(id: number, status: string) {
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({ status, edited_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+
+    if (error || !data || data.length === 0) {
+      setMessage('Could not update status.' + (error ? ' ' + error.message : ''))
+    } else {
+      setContents(contents.map((c) => (c.id === id ? { ...c, status } : c)))
     }
   }
 
@@ -205,6 +220,20 @@ export default function DashboardPage() {
           </p>
           <p><small>Created: {new Date(c.created_at).toLocaleString()}</small></p>
 
+          <button
+            onClick={() => handleStatus(c.id, 'published')}
+            disabled={c.status === 'published'}
+            style={{ padding: '6px 12px', backgroundColor: '#2a7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
+          >
+            Publish
+          </button>
+          <button
+            onClick={() => handleStatus(c.id, 'discarded')}
+            disabled={c.status === 'discarded'}
+            style={{ padding: '6px 12px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
+          >
+            Discard
+          </button>
           <button
             onClick={() => handleDeleteContent(c.id)}
             style={{ padding: '6px 12px', backgroundColor: '#a33', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
