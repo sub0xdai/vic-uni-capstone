@@ -1,26 +1,62 @@
 "use client";
 
-import type { Draft } from "@/lib/types";
+import { Stars } from "@/components/ui";
+import { CONTENT_TYPE_LABELS, type Draft } from "@/lib/types";
 
 export type DraftListProps = {
   drafts: Draft[];
   onDelete: (id: string) => void;
+  onRate?: (id: string, rating: number) => void;
 };
 
-export function DraftList(_props: DraftListProps) {
+const ROW = "flex flex-wrap items-center gap-4 border-b border-black/5 py-3 last:border-0";
+const DELETE =
+  "rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium " +
+  "text-red-700 hover:bg-red-50";
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+export function DraftList({ drafts, onDelete, onRate }: DraftListProps) {
+  if (drafts.length === 0) {
+    return <p className="text-sm text-neutral-600">No content yet.</p>;
+  }
+
   return (
-    <div className="rounded-xl border-2 border-dashed border-amber-400/70 bg-amber-50/60 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-        W3.3 not built
-      </p>
-      <p className="mt-1 text-base font-semibold text-neutral-900">
-        Dashboard draft list
-      </p>
-      <ul className="mt-3 space-y-1 text-sm text-neutral-700">
-        <li>- One row per draft: type, topic, date, stars</li>
-        <li>- Delete button per row</li>
-        <li>- Empty state: no content yet, with a link to the generator</li>
-      </ul>
-    </div>
+    <ul>
+      {drafts.map((draft) => (
+        <li key={draft.id} className={ROW}>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-neutral-900">{draft.topic}</p>
+            <p className="text-xs text-neutral-500">
+              {CONTENT_TYPE_LABELS[draft.contentType]} - {formatDate(draft.createdAt)}
+            </p>
+          </div>
+
+          <Stars
+            value={draft.rating}
+            onChange={
+              onRate === undefined
+                ? undefined
+                : (rating) => {
+                    onRate(draft.id, rating);
+                  }
+            }
+          />
+
+          <button
+            type="button"
+            onClick={() => {
+              onDelete(draft.id);
+            }}
+            className={DELETE}
+          >
+            Delete
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
