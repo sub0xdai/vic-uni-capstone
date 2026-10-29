@@ -31,6 +31,8 @@ type Content = {
   status: string | null
 }
 
+const MONTHLY_LIMIT = 20
+
 function ScoreBar({ label, value }: { label: string; value?: number }) {
   const pct = Math.round((value ?? 0) * 100)
   return (
@@ -150,6 +152,15 @@ export default function DashboardPage() {
       ? 0
       : Math.round((scored.reduce((sum, c) => sum + (c.quality_score ?? 0), 0) / scored.length) * 100)
 
+  const now = new Date()
+  const usedThisMonth = contents.filter((c) => {
+    const d = new Date(c.created_at)
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  }).length
+  const limitReached = usedThisMonth >= MONTHLY_LIMIT
+
+  const favourites = contents.filter((c) => (c.rating ?? 0) >= 4 && c.status !== 'discarded')
+
   const cardStyle = {
     border: '1px solid #444',
     borderRadius: '6px',
@@ -162,22 +173,26 @@ export default function DashboardPage() {
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '20px', color: 'white' }}>
       <h1>Dashboard</h1>
 
-      <button
-        onClick={handleSignOut}
-        style={{ padding: '6px 14px', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer', marginBottom: '20px' }}
-      >
-        Sign Out
-      </button>
-
-      <p style={{ marginBottom: '20px' }}>
-        <a href="/profile" style={{ color: '#4af' }}>Edit Business Profile</a>
-      </p>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+        <a
+          href="/profile"
+          style={{ display: 'inline-block', padding: '8px 18px', backgroundColor: '#4af', color: '#000', borderRadius: '6px', fontWeight: 'bold', textDecoration: 'none' }}
+        >
+          Edit Business Profile
+        </a>
+        <button
+          onClick={handleSignOut}
+          style={{ padding: '8px 18px', backgroundColor: 'transparent', color: '#f66', border: '2px solid #f66', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+        >
+          Sign Out
+        </button>
+      </div>
 
       {loading && <p>Loading...</p>}
       {message && <p>{message}</p>}
 
       <h2>Overview</h2>
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
         <div style={{ ...cardStyle, flex: 1, marginBottom: 0, textAlign: 'center' }}>
           <div style={{ fontSize: '28px' }}>{contents.length}</div>
           <div style={{ fontSize: '12px', color: '#aaa' }}>Total drafts</div>
@@ -186,7 +201,38 @@ export default function DashboardPage() {
           <div style={{ fontSize: '28px' }}>{avgScore}%</div>
           <div style={{ fontSize: '12px', color: '#aaa' }}>Average quality score</div>
         </div>
+        <div style={{ ...cardStyle, flex: 1, marginBottom: 0, textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', color: limitReached ? '#f66' : 'white' }}>
+            {usedThisMonth} / {MONTHLY_LIMIT}
+          </div>
+          <div style={{ fontSize: '12px', color: '#aaa' }}>Generated this month</div>
+        </div>
       </div>
+      {limitReached && (
+        <p style={{ color: '#f66', marginBottom: '25px' }}>
+          You have reached your monthly generation limit.
+        </p>
+      )}
+      {!limitReached && <div style={{ marginBottom: '25px' }} />}
+
+      <h2>Top Favourites</h2>
+      {!loading && favourites.length === 0 && (
+        <p style={{ color: '#aaa' }}>Rate a draft 4 or 5 stars and it will show up here.</p>
+      )}
+      {favourites.map((c) => (
+        <div key={'fav-' + c.id} style={{ ...cardStyle, borderColor: '#fc4' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <strong>{c.content_type}</strong>
+            <span style={{ color: '#fc4' }}>{'★'.repeat(c.rating ?? 0)}</span>
+          </div>
+          <p style={{ margin: '10px 0' }}>
+            {c.content_text.length > 160 ? c.content_text.slice(0, 160) + '...' : c.content_text}
+          </p>
+          <small style={{ color: '#aaa' }}>
+            Quality: {c.quality_score === null ? 'Not scored' : Math.round(c.quality_score * 100) + '%'}
+          </small>
+        </div>
+      ))}
 
       <h2>Generated Content</h2>
       {!loading && contents.length === 0 && <p>No generated content yet.</p>}
@@ -223,14 +269,14 @@ export default function DashboardPage() {
           <button
             onClick={() => handleStatus(c.id, 'published')}
             disabled={c.status === 'published'}
-            style={{ padding: '6px 12px', backgroundColor: '#2a7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
+            style={{ padding: '6px 12px', backgroundColor: '#2a7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', opacity: c.status === 'published' ? 0.4 : 1 }}
           >
             Publish
           </button>
           <button
             onClick={() => handleStatus(c.id, 'discarded')}
             disabled={c.status === 'discarded'}
-            style={{ padding: '6px 12px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px' }}
+            style={{ padding: '6px 12px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', opacity: c.status === 'discarded' ? 0.4 : 1 }}
           >
             Discard
           </button>

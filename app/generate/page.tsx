@@ -12,6 +12,7 @@ type Profile = {
 }
 
 const CONTENT_TYPES = ['Instagram Caption', 'Blog Outline', 'Email Newsletter']
+const MONTHLY_LIMIT = 20
 
 const inputStyle = {
   width: '100%',
@@ -22,6 +23,11 @@ const inputStyle = {
   borderRadius: '4px',
 }
 
+function startOfMonthISO() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString()
+}
+
 export default function GeneratePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [contentType, setContentType] = useState(CONTENT_TYPES[0])
@@ -30,6 +36,17 @@ export default function GeneratePage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [seconds, setSeconds] = useState(0)
+  const [usedThisMonth, setUsedThisMonth] = useState(0)
+
+  async function loadUsage(userId: string) {
+    const { count } = await supabase
+      .from('generated_content')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', startOfMonthISO())
+    setUsedThisMonth(count ?? 0)
+    return count ?? 0
+  }
 
   useEffect(() => {
     async function load() {
@@ -46,6 +63,7 @@ export default function GeneratePage() {
         .maybeSingle()
       if (data) setProfile(data as Profile)
       else setMessage('Please create your business profile first.')
+      await loadUsage(user.id)
     }
     load()
   }, [])
@@ -63,6 +81,12 @@ export default function GeneratePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setMessage('You must be logged in.')
+        return
+      }
+
+      const used = await loadUsage(user.id)
+      if (used >= MONTHLY_LIMIT) {
+        setMessage('You have reached your monthly limit of ' + MONTHLY_LIMIT + ' generations.')
         return
       }
 
@@ -113,6 +137,7 @@ export default function GeneratePage() {
       })
 
       setMessage(error ? 'Generated, but could not save: ' + error.message : 'Saved to your dashboard.')
+      if (!error) setUsedThisMonth(used + 1)
     } catch {
       setMessage('Something went wrong. Please try again.')
     } finally {
@@ -120,6 +145,9 @@ export default function GeneratePage() {
       setLoading(false)
     }
   }
+
+  const limitReached = usedThisMonth >= MONTHLY_LIMIT
+  const buttonDisabled = loading || !profile || limitReached
 
   return (
     <div style={{ maxWidth: '600px', margin: '40px auto', padding: '20px', color: 'white' }}>
@@ -140,9 +168,26 @@ export default function GeneratePage() {
         </select>
       </div>
 
-      <button onClick={handleGenerate} disabled={loading || !profile} style={{ padding: '10px 20px' }}>
+      <button
+        onClick={handleGenerate}
+        disabled={buttonDisabled}
+        style={{
+          padding: '10px 24px',
+          backgroundColor: '#4af',
+          color: '#000',
+          border: 'none',
+          borderRadius: '6px',
+          fontWeight: 'bold',
+          cursor: buttonDisabled ? 'not-allowed' : 'pointer',
+          opacity: buttonDisabled ? 0.5 : 1,
+        }}
+      >
         {loading ? 'Generating... ' + seconds + 's' : 'Generate'}
       </button>
+
+      <p style={{ marginTop: '10px', fontSize: '13px', color: limitReached ? '#f66' : '#aaa' }}>
+        Generated this month: {usedThisMonth} / {MONTHLY_LIMIT}
+      </p>
 
       {message && <p style={{ marginTop: '15px' }}>{message}</p>}
 
@@ -160,7 +205,20 @@ export default function GeneratePage() {
       )}
 
       <p style={{ marginTop: '20px' }}>
-        <a href="/dashboard" style={{ color: '#4af' }}>Go to Dashboard</a>
+        <a
+          href="/dashboard"
+          style={{
+            display: 'inline-block',
+            padding: '10px 24px',
+            backgroundColor: '#2a7',
+            color: 'white',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            textDecoration: 'none',
+          }}
+        >
+          Go to Dashboard
+        </a>
       </p>
     </div>
   )
