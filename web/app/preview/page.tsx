@@ -144,7 +144,21 @@ export default function PreviewPage() {
           title="W3.3 Dashboard draft list"
           subtitle="Owner B. Rows plus delete and an empty state."
         >
-          <DraftList drafts={[DRAFT, DRAFT]} onDelete={() => {}} />
+          <DraftList
+            drafts={[
+              DRAFT,
+              {
+                ...DRAFT,
+                id: "00000000-0000-0000-0000-000000000004",
+                contentType: "email_newsletter",
+                topic: "October roast club email",
+                rating: null,
+                analysis: null,
+              },
+            ]}
+            onDelete={() => {}}
+            onRate={() => {}}
+          />
         </Card>
       </div>
     </main>
