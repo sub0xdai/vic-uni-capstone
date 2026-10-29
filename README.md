@@ -12,7 +12,7 @@ The build has to be mostly finished before the second unit starts, because that 
 docs/          proposal and design
   sections/    14 markdown files, one per numbered section
   design/      architecture decisions and the reasoning behind them
-  plan/        task breakdown, owners, acceptance criteria
+  plan/        task breakdown, owners, acceptance criteria, working agreements
   build/       pulls the markdown back out of a docx
   assets/      images the proposal references
 web/           the application
