@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Button, Stars, controlClass } from "@/components/ui";
 import type { Draft } from "@/lib/types";
 
 export type DraftEditorProps = {
@@ -9,21 +11,83 @@ export type DraftEditorProps = {
   onCopy: () => void;
 };
 
-export function DraftEditor(_props: DraftEditorProps) {
+type CopyState = "idle" | "copied" | "failed";
+
+export function DraftEditor({ draft, onSave, onRate, onCopy }: DraftEditorProps) {
+  const [text, setText] = useState(draft.contentText);
+  const [copy, setCopy] = useState<CopyState>("idle");
+
+  useEffect(() => {
+    if (copy === "idle") {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCopy("idle");
+    }, 2000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [copy]);
+
+  const changed = text !== draft.contentText;
+
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopy("copied");
+      onCopy();
+    } catch {
+      setCopy("failed");
+    }
+  }
+
   return (
-    <div className="rounded-xl border-2 border-dashed border-amber-400/70 bg-amber-50/60 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-        W3.2 not built
-      </p>
-      <p className="mt-1 text-base font-semibold text-neutral-900">
-        Draft editor and actions
-      </p>
-      <ul className="mt-3 space-y-1 text-sm text-neutral-700">
-        <li>- Editable textarea seeded with the generated text</li>
-        <li>- Save button, disabled until the text changes</li>
-        <li>- Copy to clipboard button with a confirmation</li>
-        <li>- Five star rating, saves on click</li>
-      </ul>
+    <div className="space-y-4">
+      <textarea
+        aria-label="Draft text"
+        className={controlClass}
+        rows={10}
+        value={text}
+        onChange={(event) => {
+          setText(event.target.value);
+        }}
+      />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          disabled={!changed || text.trim().length === 0}
+          onClick={() => {
+            onSave(text);
+          }}
+        >
+          Save changes
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            void copyText();
+          }}
+        >
+          Copy to clipboard
+        </Button>
+        {copy === "copied" ? (
+          <span className="text-sm text-emerald-700" role="status">
+            Copied
+          </span>
+        ) : null}
+        {copy === "failed" ? (
+          <span className="text-sm text-red-600" role="alert">
+            Copy failed. Select the text and copy it by hand.
+          </span>
+        ) : null}
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-[13px] font-bold text-neutral-900">Rate this draft</p>
+        <Stars value={draft.rating} onChange={onRate} />
+      </div>
     </div>
   );
 }
