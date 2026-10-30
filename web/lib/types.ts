@@ -10,6 +10,10 @@ export const BRAND_TONES = ["professional", "casual", "friendly"] as const;
 
 export type BrandTone = (typeof BRAND_TONES)[number];
 
+export const DRAFT_STATUSES = ["draft", "published", "discarded"] as const;
+
+export type DraftStatus = (typeof DRAFT_STATUSES)[number];
+
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   blog_outline: "Blog outline",
   social_caption: "Social media caption",
@@ -20,6 +24,12 @@ export const BRAND_TONE_LABELS: Record<BrandTone, string> = {
   professional: "Professional",
   casual: "Casual",
   friendly: "Friendly",
+};
+
+export const DRAFT_STATUS_LABELS: Record<DraftStatus, string> = {
+  draft: "Draft",
+  published: "Published",
+  discarded: "Discarded",
 };
 
 export const QUALITY_WEIGHTS = {
@@ -65,6 +75,8 @@ export type Draft = {
   keywords: string[];
   contentText: string;
   rating: number | null;
+  status: DraftStatus;
+  statusChangedAt: string | null;
   analysis: QualityReport | null;
   parameters: GenerationParameters | null;
   createdAt: string;
@@ -83,6 +95,9 @@ export type Result<T, E = string> = Ok<T> | Err<E>;
 export const RATING_MIN = 1;
 export const RATING_MAX = 5;
 
+export const FAVOURITE_MIN_RATING = 4;
+export const MONTHLY_LIMIT = 20;
+
 export function ok<T>(value: T): Ok<T> {
   return { ok: true, value };
 }
@@ -97,6 +112,10 @@ export function isContentType(value: unknown): value is ContentType {
 
 export function isBrandTone(value: unknown): value is BrandTone {
   return typeof value === "string" && (BRAND_TONES as readonly string[]).includes(value);
+}
+
+export function isDraftStatus(value: unknown): value is DraftStatus {
+  return typeof value === "string" && (DRAFT_STATUSES as readonly string[]).includes(value);
 }
 
 export function isRating(value: unknown): value is number {
