@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { optionalEnv } from "@/lib/env";
+import { MissingEnvError, optionalEnv } from "@/lib/env";
 import {
   GEMINI_DEFAULT_MODEL,
   GEMINI_TEMPERATURE,
@@ -37,7 +37,16 @@ export async function POST(request: Request) {
   }
   const input = parsed.value;
 
-  const supabase = await supabaseServer();
+  let supabase: Awaited<ReturnType<typeof supabaseServer>>;
+  try {
+    supabase = await supabaseServer();
+  } catch (error) {
+    if (error instanceof MissingEnvError) {
+      console.error(`Supabase is not configured: ${error.variable} is not set`);
+      return fail("The database is not set up yet.", 500);
+    }
+    throw error;
+  }
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError !== null || auth.user === null) {
     return fail("You must be logged in to generate content.", 401);
@@ -127,7 +136,8 @@ export async function POST(request: Request) {
     .select("*")
     .single();
   if (saveError !== null) {
-    return fail(`Could not save the draft: ${saveError.message}`, 500);
+    console.error(`Could not save the draft: ${saveError.message}`);
+    return fail("The draft could not be saved. Please try again.", 500);
   }
   const draft = parseDraft(saved);
   if (!draft.ok) {

@@ -3,7 +3,7 @@ import { invariant } from "@/lib/assert";
 import { RATING_MAX, RATING_MIN, isRating } from "@/lib/types";
 
 export const controlClass = [
-  "w-full rounded-lg border border-black/15 bg-white px-3 py-2",
+  "w-full rounded-lg border border-[#d7e2f1] bg-white px-3 py-2.5",
   "text-sm text-neutral-900 outline-none disabled:opacity-50",
   "focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/20",
 ].join(" ");
@@ -18,11 +18,16 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+    <section
+      className={
+        "rounded-2xl border border-[#e2eaf5] bg-white p-6 " +
+        "shadow-[0_4px_22px_rgba(24,55,97,0.06)]"
+      }
+    >
       <header className="mb-4">
-        <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+        <h2 className="text-lg font-bold text-neutral-900">{title}</h2>
         {subtitle ? (
-          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
+          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
         ) : null}
       </header>
       {children}
@@ -43,14 +48,14 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-neutral-800">
+      <span className="mb-1.5 block text-[13px] font-bold text-neutral-900">
         {label}
       </span>
       {children}
       {error ? (
         <span className="mt-1 block text-xs text-red-600">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-neutral-500">{hint}</span>
+        <span className="mt-1 block text-xs text-slate-500">{hint}</span>
       ) : null}
     </label>
   );
@@ -66,12 +71,12 @@ export function Button({
   const styles =
     variant === "primary"
       ? "bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-300"
-      : "border border-black/15 bg-white text-neutral-800 hover:bg-neutral-50";
+      : "border border-[#bcd2ff] bg-white text-indigo-600 hover:bg-indigo-50";
   return (
     <button
       {...rest}
       className={[
-        "rounded-lg px-4 py-2 text-sm font-medium transition",
+        "rounded-lg px-4 py-2.5 text-sm font-bold transition",
         "disabled:cursor-not-allowed",
         styles,
       ].join(" ")}
