@@ -26,7 +26,8 @@ function readDraft(value: unknown): Draft | null {
     typeof item.id !== "string" ||
     typeof item.contentText !== "string" ||
     typeof item.topic !== "string" ||
-    !isContentType(item.contentType)
+    !isContentType(item.contentType) ||
+    !(item.rating === null || typeof item.rating === "number")
   ) {
     return null;
   }
@@ -76,7 +77,6 @@ export default function GeneratePage() {
     keywords: [],
   });
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [profileChecked, setProfileChecked] = useState(false);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [note, setNote] = useState<Note | null>(null);
@@ -88,7 +88,6 @@ export default function GeneratePage() {
         return;
       }
       setProfile(result.profile);
-      setProfileChecked(true);
       if (result.error !== null) {
         setNote({ kind: "error", text: result.error });
       }
@@ -195,12 +194,6 @@ export default function GeneratePage() {
         </p>
       )}
 
-      {profileChecked && profile === null ? (
-        <Link href="/onboarding" className="text-sm font-medium text-indigo-600 hover:underline">
-          Go to business profile
-        </Link>
-      ) : null}
-
       {draft === null ? null : (
         <Card title="Your draft" subtitle={draft.topic}>
           <DraftEditor
@@ -219,7 +212,10 @@ export default function GeneratePage() {
         </Card>
       )}
 
-      <Link href="/dashboard" className="inline-block text-sm font-medium text-indigo-600 hover:underline">
+      <Link
+        href="/dashboard"
+        className="inline-block text-sm font-medium text-indigo-600 hover:underline"
+      >
         Back to dashboard
       </Link>
     </main>

@@ -51,6 +51,9 @@ export function NavBar() {
           <Link href="/dashboard" className={LINK}>
             Dashboard
           </Link>
+          <Link href="/generate" className={LINK}>
+            Generate
+          </Link>
           <Link href="/onboarding" className={LINK}>
             Business profile
           </Link>

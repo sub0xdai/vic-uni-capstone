@@ -85,7 +85,7 @@ export function DraftEditor({ draft, onSave, onRate, onCopy }: DraftEditorProps)
       </div>
 
       <div>
-        <p className="mb-1 text-sm font-medium text-neutral-800">Rate this draft</p>
+        <p className="mb-1.5 text-[13px] font-bold text-neutral-900">Rate this draft</p>
         <Stars value={draft.rating} onChange={onRate} />
       </div>
     </div>

@@ -20,9 +20,9 @@ export type GeneratorPanelProps = {
   profile?: BusinessProfile | null;
 };
 
-const TAB_BASE = "rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50";
+const TAB_BASE = "rounded-lg px-3 py-2 text-sm font-bold transition disabled:opacity-50";
 const TAB_ON = `${TAB_BASE} bg-indigo-600 text-white`;
-const TAB_OFF = `${TAB_BASE} border border-black/15 bg-white text-neutral-800 hover:bg-neutral-50`;
+const TAB_OFF = `${TAB_BASE} border border-[#bcd2ff] bg-white text-indigo-600 hover:bg-indigo-50`;
 
 export function GeneratorPanel({
   value,
@@ -61,7 +61,9 @@ export function GeneratorPanel({
       }}
     >
       <div>
-        <span className="mb-1 block text-sm font-medium text-neutral-800">Content type</span>
+        <span className="mb-1.5 block text-[13px] font-bold text-neutral-900">
+          Content type
+        </span>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Content type">
           {CONTENT_TYPES.map((kind) => (
             <button
@@ -123,7 +125,10 @@ export function GeneratorPanel({
             {value.keywords.map((word) => (
               <li
                 key={word}
-                className="flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-sm text-indigo-700"
+                className={
+                  "flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 " +
+                  "text-sm text-indigo-700"
+                }
               >
                 {word}
                 <button
@@ -154,7 +159,10 @@ export function GeneratorPanel({
         {pending ? (
           <span className="flex items-center gap-2">
             <span
-              className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              className={
+                "inline-block h-4 w-4 animate-spin rounded-full " +
+                "border-2 border-white/40 border-t-white"
+              }
               aria-hidden="true"
             />
             Generating...
