@@ -37,7 +37,8 @@ function countThisMonth(drafts: Draft[], now: Date): number {
   return drafts.filter((draft) => {
     const created = new Date(draft.createdAt);
     return (
-      created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth()
+      created.getUTCFullYear() === now.getUTCFullYear() &&
+      created.getUTCMonth() === now.getUTCMonth()
     );
   }).length;
 }

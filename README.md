@@ -34,7 +34,7 @@ pnpm dev
 That page needs no database, no API keys and no login, so most component work happens there.
 
 The other routes need `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`.
-`OPENAI_API_KEY` is only read by the generation endpoint.
+`GEMINI_API_KEY` is only read by the generation endpoint, which defaults to `gemini-3.5-flash-lite` and takes `GEMINI_MODEL` to change that.
 
 ### Checks
 
