@@ -280,6 +280,34 @@ export default function DashboardPage() {
         )}
       </Card>
 
+      <Card title="Top favourites" subtitle="Drafts you rated 4 or 5 stars.">
+        {favourites.length === 0 ? (
+          <p className="text-sm text-neutral-600">
+            Rate a draft 4 or 5 stars and it will show up here.
+          </p>
+        ) : (
+          <ul>
+            {favourites.map((draft) => (
+              <li
+                key={draft.id}
+                className="flex flex-wrap items-center gap-4 border-b border-black/5 py-3 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-neutral-900">{draft.topic}</p>
+                  <p className="text-xs text-neutral-500">
+                    {CONTENT_TYPE_LABELS[draft.contentType]}
+                    {draft.analysis === null
+                      ? ""
+                      : ` - quality ${Math.round(draft.analysis.overallScore * 100)}%`}
+                  </p>
+                </div>
+                <Stars value={draft.rating} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card title="Generated content" subtitle="Newest first.">
         <DraftList
           drafts={drafts}
