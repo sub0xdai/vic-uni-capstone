@@ -3,11 +3,13 @@ import {
   QUALITY_METRICS,
   err,
   isBrandTone,
+  isDraftStatus,
   isRating,
   ok,
   type BusinessProfile,
   type ContentType,
   type Draft,
+  type DraftStatus,
   type GenerationParameters,
   type QualityMetric,
   type QualityReport,
@@ -150,6 +152,8 @@ export function parseDraft(value: unknown): Result<Draft> {
     ? rawKeywords.filter((item): item is string => typeof item === "string")
     : [];
   const rating: unknown = source.rating;
+  const rawStatus: unknown = source.status;
+  const status: DraftStatus = isDraftStatus(rawStatus) ? rawStatus : "draft";
 
   return ok({
     id,
@@ -159,6 +163,8 @@ export function parseDraft(value: unknown): Result<Draft> {
     keywords,
     contentText,
     rating: isRating(rating) ? rating : null,
+    status,
+    statusChangedAt: text(source, "status_changed_at"),
     analysis: parseQualityReport(source.analysis),
     parameters: parseParameters(source),
     createdAt,
