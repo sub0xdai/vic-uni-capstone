@@ -21,7 +21,8 @@ import {
 const NOT_SIGNED_IN = "You must be logged in to see your dashboard";
 
 const CTA =
-  "mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700";
+  "mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white " +
+  "hover:bg-indigo-700";
 
 function averageScore(drafts: Draft[]): number | null {
   const scored = drafts.filter((draft) => draft.analysis !== null);
@@ -60,13 +61,13 @@ function Tile({
   alert?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-indigo-50 p-4 text-center">
+    <div className="flex flex-col-reverse gap-1 rounded-xl bg-indigo-50 p-4 text-center">
+      <dt className="text-xs font-medium text-slate-500">{label}</dt>
       <dd
         className={`text-3xl font-extrabold ${alert ? "text-red-600" : "text-indigo-600"}`}
       >
         {value}
       </dd>
-      <dt className="mt-1 text-xs font-medium text-slate-500">{label}</dt>
     </div>
   );
 }
@@ -216,7 +217,12 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl space-y-6 p-6">
-      <section className="rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-500 p-8 text-white shadow-[0_8px_30px_rgba(20,100,244,0.25)]">
+      <section
+        className={
+          "rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-500 p-8 text-white " +
+          "shadow-[0_8px_30px_rgba(20,100,244,0.25)]"
+        }
+      >
         <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold">
           AI-powered for small businesses
         </span>
@@ -226,7 +232,10 @@ export default function DashboardPage() {
         </p>
         <Link
           href="/onboarding"
-          className="mt-5 inline-block rounded-lg bg-white px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50"
+          className={
+            "mt-5 inline-block rounded-lg bg-white px-4 py-2.5 text-sm font-bold " +
+            "text-indigo-600 hover:bg-indigo-50"
+          }
         >
           Edit business profile
         </Link>
@@ -262,7 +271,10 @@ export default function DashboardPage() {
             {favourites.map((draft) => (
               <li
                 key={draft.id}
-                className="flex flex-wrap items-center gap-4 border-b border-[#e2eaf5] py-3 last:border-0"
+                className={
+                  "flex flex-wrap items-center gap-4 border-b border-[#e2eaf5] py-3 " +
+                  "last:border-0"
+                }
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-neutral-900">{draft.topic}</p>

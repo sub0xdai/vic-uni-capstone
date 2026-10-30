@@ -18,7 +18,12 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[#e2eaf5] bg-white p-6 shadow-[0_4px_22px_rgba(24,55,97,0.06)]">
+    <section
+      className={
+        "rounded-2xl border border-[#e2eaf5] bg-white p-6 " +
+        "shadow-[0_4px_22px_rgba(24,55,97,0.06)]"
+      }
+    >
       <header className="mb-4">
         <h2 className="text-lg font-bold text-neutral-900">{title}</h2>
         {subtitle ? (
