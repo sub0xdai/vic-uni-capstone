@@ -1,5 +1,6 @@
 create type content_kind as enum ('blog_outline', 'social_caption', 'email_newsletter');
 create type brand_voice as enum ('professional', 'casual', 'friendly');
+create type content_status as enum ('draft', 'published', 'discarded');
 
 create table business_profile (
   id uuid primary key default gen_random_uuid(),
@@ -23,6 +24,8 @@ create table generated_content (
   content_text text not null,
   rating smallint,
   analysis jsonb,
+  status content_status not null default 'draft',
+  status_changed_at timestamptz,
   model text not null,
   temperature numeric not null,
   system_prompt text not null,
