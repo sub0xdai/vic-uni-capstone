@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 
-const LINK = "text-sm font-medium text-neutral-700 hover:text-indigo-600";
+const LINK = "text-sm font-medium text-[#27395b] hover:text-indigo-600";
 const SIGN_OUT =
-  "ml-auto rounded-lg border border-black/15 px-3 py-1.5 text-sm font-medium " +
-  "text-neutral-800 hover:bg-neutral-50";
+  "ml-auto rounded-lg border border-[#bcd2ff] bg-white px-4 py-2 text-sm font-bold " +
+  "text-indigo-600 hover:bg-indigo-50";
 
 export function NavBar() {
   const router = useRouter();
@@ -41,9 +41,9 @@ export function NavBar() {
   }
 
   return (
-    <nav className="flex items-center gap-6 border-b border-black/10 bg-white px-6 py-4">
-      <Link href="/" className="text-base font-semibold text-neutral-900">
-        ContentCraft
+    <nav className="flex items-center gap-6 border-b border-[#e2eaf5] bg-white px-6 py-4 md:px-12">
+      <Link href="/" className="text-2xl font-extrabold text-neutral-900">
+        Content<span className="text-indigo-600">Craft</span>
       </Link>
 
       {signedIn === true ? (
