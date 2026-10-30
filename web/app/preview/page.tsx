@@ -45,6 +45,8 @@ const DRAFT: Draft = {
     "Grab a bag this week and tell us what you taste.",
   ].join("\n"),
   rating: 4,
+  status: "draft",
+  statusChangedAt: null,
   analysis: ANALYSIS,
   parameters: {
     model: "gpt-4o-mini",
@@ -142,7 +144,7 @@ export default function PreviewPage() {
 
         <Card
           title="W3.3 Dashboard draft list"
-          subtitle="Owner B. Rows plus delete and an empty state."
+          subtitle="Owner B. Rows plus publish, discard, delete and an empty state."
         >
           <DraftList
             drafts={[
@@ -153,11 +155,14 @@ export default function PreviewPage() {
                 contentType: "email_newsletter",
                 topic: "October roast club email",
                 rating: null,
+                status: "published",
+                statusChangedAt: new Date("2026-10-03T10:00:00Z").toISOString(),
                 analysis: null,
               },
             ]}
             onDelete={() => {}}
             onRate={() => {}}
+            onStatus={() => {}}
           />
         </Card>
       </div>

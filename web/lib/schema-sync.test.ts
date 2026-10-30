@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { BRAND_TONES, CONTENT_TYPES } from "./types.ts";
+import { BRAND_TONES, CONTENT_TYPES, DRAFT_STATUSES } from "./types.ts";
 
 const SQL = readFileSync(new URL("../supabase/schema.sql", import.meta.url), "utf8");
 
@@ -21,6 +21,14 @@ test("content_kind matches CONTENT_TYPES", () => {
 
 test("brand_voice matches BRAND_TONES", () => {
   assert.deepEqual(enumValues("brand_voice"), [...BRAND_TONES].sort());
+});
+
+test("content_status matches DRAFT_STATUSES", () => {
+  assert.deepEqual(enumValues("content_status"), [...DRAFT_STATUSES].sort());
+});
+
+test("generated_content has a status column that defaults to draft", () => {
+  assert.match(SQL, /status content_status not null default 'draft'/);
 });
 
 test("every content column is not null", () => {

@@ -4,10 +4,19 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { DraftList } from "@/components/draft-list";
 import { QualityCard } from "@/components/quality-card";
-import { Card } from "@/components/ui";
+import { Card, Stars } from "@/components/ui";
 import { parseDraft } from "@/lib/rows";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
-import { err, ok, type Draft, type Result } from "@/lib/types";
+import {
+  CONTENT_TYPE_LABELS,
+  FAVOURITE_MIN_RATING,
+  MONTHLY_LIMIT,
+  err,
+  ok,
+  type Draft,
+  type DraftStatus,
+  type Result,
+} from "@/lib/types";
 
 const NOT_SIGNED_IN = "You must be logged in to see your dashboard";
 
@@ -23,10 +32,29 @@ function averageScore(drafts: Draft[]): number | null {
   return Math.round((total / scored.length) * 100);
 }
 
+function countThisMonth(drafts: Draft[], now: Date): number {
+  return drafts.filter((draft) => {
+    const created = new Date(draft.createdAt);
+    return (
+      created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth()
+    );
+  }).length;
+}
+
+function favouriteDrafts(drafts: Draft[]): Draft[] {
+  return drafts.filter(
+    (draft) =>
+      draft.status !== "discarded" &&
+      draft.rating !== null &&
+      draft.rating >= FAVOURITE_MIN_RATING,
+  );
+}
+
 export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [now] = useState(() => new Date());
 
   const load = useCallback(async (): Promise<Result<Draft[]>> => {
     const client = supabaseBrowserResult();
@@ -114,6 +142,33 @@ export default function DashboardPage() {
     );
   }
 
+  async function changeStatus(id: string, status: DraftStatus) {
+    const client = supabaseBrowserResult();
+    if (!client.ok) {
+      setMessage(client.error);
+      return;
+    }
+    const changedAt = new Date().toISOString();
+    const { data, error } = await client.value
+      .from("generated_content")
+      .update({ status, status_changed_at: changedAt })
+      .eq("id", id)
+      .select("id");
+    if (error !== null) {
+      setMessage(`Could not update the status: ${error.message}`);
+      return;
+    }
+    if (data.length === 0) {
+      setMessage("Could not update the status: draft not found.");
+      return;
+    }
+    setDrafts((current) =>
+      current.map((draft) =>
+        draft.id === id ? { ...draft, status, statusChangedAt: changedAt } : draft,
+      ),
+    );
+  }
+
   if (loading) {
     return <p className="p-6 text-sm text-neutral-500">Loading...</p>;
   }
@@ -134,11 +189,14 @@ export default function DashboardPage() {
   const average = averageScore(drafts);
   const latest = drafts.at(0) ?? null;
   const notice = message === NOT_SIGNED_IN ? null : message;
+  const usedThisMonth = countThisMonth(drafts, now);
+  const limitReached = usedThisMonth >= MONTHLY_LIMIT;
+  const favourites = favouriteDrafts(drafts);
 
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 p-6">
       <Card title="Overview">
-        <dl className="grid grid-cols-2 gap-4">
+        <dl className="grid grid-cols-3 gap-4">
           <div>
             <dt className="text-xs uppercase tracking-wide text-neutral-500">Total drafts</dt>
             <dd className="text-2xl font-semibold text-neutral-900">{drafts.length}</dd>
@@ -151,7 +209,24 @@ export default function DashboardPage() {
               {average === null ? "-" : `${average}%`}
             </dd>
           </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-neutral-500">
+              Generated this month
+            </dt>
+            <dd
+              className={`text-2xl font-semibold ${
+                limitReached ? "text-red-600" : "text-neutral-900"
+              }`}
+            >
+              {usedThisMonth} / {MONTHLY_LIMIT}
+            </dd>
+          </div>
         </dl>
+        {limitReached ? (
+          <p className="mt-3 text-sm text-red-600" role="alert">
+            You have reached your monthly generation limit.
+          </p>
+        ) : null}
         <Link
           href="/onboarding"
           className="mt-4 inline-block text-sm font-medium text-indigo-600 hover:underline"
@@ -160,8 +235,41 @@ export default function DashboardPage() {
         </Link>
       </Card>
 
+      <Card title="Top favourites" subtitle="Drafts you rated 4 or 5 stars.">
+        {favourites.length === 0 ? (
+          <p className="text-sm text-neutral-600">
+            Rate a draft 4 or 5 stars and it will show up here.
+          </p>
+        ) : (
+          <ul>
+            {favourites.map((draft) => (
+              <li
+                key={draft.id}
+                className="flex flex-wrap items-center gap-4 border-b border-black/5 py-3 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-neutral-900">{draft.topic}</p>
+                  <p className="text-xs text-neutral-500">
+                    {CONTENT_TYPE_LABELS[draft.contentType]}
+                    {draft.analysis === null
+                      ? ""
+                      : ` - quality ${Math.round(draft.analysis.overallScore * 100)}%`}
+                  </p>
+                </div>
+                <Stars value={draft.rating} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card title="Generated content" subtitle="Newest first.">
-        <DraftList drafts={drafts} onDelete={remove} onRate={rate} />
+        <DraftList
+          drafts={drafts}
+          onDelete={remove}
+          onRate={rate}
+          onStatus={changeStatus}
+        />
       </Card>
 
       {latest === null ? null : (

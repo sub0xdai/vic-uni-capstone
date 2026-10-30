@@ -84,3 +84,33 @@ test("a row missing a required column is rejected", () => {
   const { content_text: _omitted, ...rest } = DRAFT_ROW;
   assert.equal(parseDraft(rest).ok, false);
 });
+
+test("a row without a status defaults to draft", () => {
+  const parsed = parseDraft(DRAFT_ROW);
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.status, "draft");
+    assert.equal(parsed.value.statusChangedAt, null);
+  }
+});
+
+test("a published row keeps its status and change time", () => {
+  const parsed = parseDraft({
+    ...DRAFT_ROW,
+    status: "published",
+    status_changed_at: "2026-10-03T10:00:00Z",
+  });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.status, "published");
+    assert.equal(parsed.value.statusChangedAt, "2026-10-03T10:00:00Z");
+  }
+});
+
+test("an unknown status falls back to draft", () => {
+  const parsed = parseDraft({ ...DRAFT_ROW, status: "archived" });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.value.status, "draft");
+  }
+});
