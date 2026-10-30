@@ -21,7 +21,8 @@ import {
 const NOT_SIGNED_IN = "You must be logged in to see your dashboard";
 
 const CTA =
-  "mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white";
+  "mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white " +
+  "hover:bg-indigo-700";
 
 function averageScore(drafts: Draft[]): number | null {
   const scored = drafts.filter((draft) => draft.analysis !== null);
@@ -47,6 +48,27 @@ function favouriteDrafts(drafts: Draft[]): Draft[] {
       draft.status !== "discarded" &&
       draft.rating !== null &&
       draft.rating >= FAVOURITE_MIN_RATING,
+  );
+}
+
+function Tile({
+  label,
+  value,
+  alert = false,
+}: {
+  label: string;
+  value: string;
+  alert?: boolean;
+}) {
+  return (
+    <div className="flex flex-col-reverse gap-1 rounded-xl bg-indigo-50 p-4 text-center">
+      <dt className="text-xs font-medium text-slate-500">{label}</dt>
+      <dd
+        className={`text-3xl font-extrabold ${alert ? "text-red-600" : "text-indigo-600"}`}
+      >
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -170,7 +192,7 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return <p className="p-6 text-sm text-neutral-500">Loading...</p>;
+    return <p className="p-6 text-sm text-slate-500">Loading...</p>;
   }
 
   if (message === NOT_SIGNED_IN) {
@@ -194,50 +216,54 @@ export default function DashboardPage() {
   const favourites = favouriteDrafts(drafts);
 
   return (
-    <main className="mx-auto w-full max-w-3xl space-y-6 p-6">
+    <main className="mx-auto w-full max-w-4xl space-y-6 p-6">
+      <section
+        className={
+          "rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-500 p-8 text-white " +
+          "shadow-[0_8px_30px_rgba(20,100,244,0.25)]"
+        }
+      >
+        <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold">
+          AI-powered for small businesses
+        </span>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Your content dashboard</h1>
+        <p className="mt-2 max-w-xl text-sm text-white/80">
+          Track your drafts, favourites and monthly usage in one place.
+        </p>
+        <Link
+          href="/onboarding"
+          className={
+            "mt-5 inline-block rounded-lg bg-white px-4 py-2.5 text-sm font-bold " +
+            "text-indigo-600 hover:bg-indigo-50"
+          }
+        >
+          Edit business profile
+        </Link>
+      </section>
+
       <Card title="Overview">
-        <dl className="grid grid-cols-3 gap-4">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-neutral-500">Total drafts</dt>
-            <dd className="text-2xl font-semibold text-neutral-900">{drafts.length}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-neutral-500">
-              Average quality
-            </dt>
-            <dd className="text-2xl font-semibold text-neutral-900">
-              {average === null ? "-" : `${average}%`}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-neutral-500">
-              Generated this month
-            </dt>
-            <dd
-              className={`text-2xl font-semibold ${
-                limitReached ? "text-red-600" : "text-neutral-900"
-              }`}
-            >
-              {usedThisMonth} / {MONTHLY_LIMIT}
-            </dd>
-          </div>
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Tile label="Total drafts" value={String(drafts.length)} />
+          <Tile
+            label="Average quality"
+            value={average === null ? "-" : `${average}%`}
+          />
+          <Tile
+            label="Generated this month"
+            value={`${usedThisMonth} / ${MONTHLY_LIMIT}`}
+            alert={limitReached}
+          />
         </dl>
         {limitReached ? (
           <p className="mt-3 text-sm text-red-600" role="alert">
             You have reached your monthly generation limit.
           </p>
         ) : null}
-        <Link
-          href="/onboarding"
-          className="mt-4 inline-block text-sm font-medium text-indigo-600 hover:underline"
-        >
-          Edit business profile
-        </Link>
       </Card>
 
       <Card title="Top favourites" subtitle="Drafts you rated 4 or 5 stars.">
         {favourites.length === 0 ? (
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-slate-500">
             Rate a draft 4 or 5 stars and it will show up here.
           </p>
         ) : (
@@ -245,11 +271,14 @@ export default function DashboardPage() {
             {favourites.map((draft) => (
               <li
                 key={draft.id}
-                className="flex flex-wrap items-center gap-4 border-b border-black/5 py-3 last:border-0"
+                className={
+                  "flex flex-wrap items-center gap-4 border-b border-[#e2eaf5] py-3 " +
+                  "last:border-0"
+                }
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-neutral-900">{draft.topic}</p>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-sm font-bold text-neutral-900">{draft.topic}</p>
+                  <p className="text-xs text-slate-500">
                     {CONTENT_TYPE_LABELS[draft.contentType]}
                     {draft.analysis === null
                       ? ""
