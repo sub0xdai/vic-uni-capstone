@@ -47,6 +47,47 @@ The branch replaced the project readme with the starter template's readme, and a
    A branch with one screen is easy to review and easy to fix.
    Eight thousand lines at once is very hard to say yes to.
 
+## Environment
+
+You need `web/.env.local` to run the app against a database.
+It is gitignored, so it never leaves your machine.
+
+```bash
+cd web
+cp .env.local.example .env.local
+```
+
+Two of those values are public and two are secret.
+
+| Variable | Secret | What it is |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | no | The project address |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Identifies the project. It ships in the JavaScript the browser downloads, so every visitor already has it |
+| `SUPABASE_SERVICE_ROLE_KEY` | **yes** | Bypasses the row level security policies. Nothing reads it yet, so leave it empty |
+| `GEMINI_API_KEY` | **yes** | Bills to whoever owns the key |
+
+The two public values can be shared in the group chat.
+That is not a leak, that is how they work.
+
+The two secret ones are never shared.
+Do not send them in chat, a screenshot, a commit or a pull request.
+If you need to test generation, make your own free key at aistudio.google.com.
+
+The protection for the data is not the key, it is the policies in `schema.sql`.
+A public key with a missing policy reads the whole table from any browser with no login.
+That is why the two user check in the readme matters more than any of this.
+
+Sign up with your own account. Do not share logins.
+One shared project is fine, and each account sees only its own rows.
+
+Deployment settings live in the Vercel project, not in the repository and not in your file.
+
+If a port is busy, it is your own leftover, not someone else's machine.
+
+```bash
+lsof -ti:3000 | xargs kill
+```
+
 ## Checklist before you open a pull request
 
 - [ ] I pulled the latest main branch today.
