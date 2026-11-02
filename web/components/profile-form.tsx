@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, controlClass } from "@/components/ui";
+import { Button, Field, controlClassFor } from "@/components/ui";
 import { validateProfileDraft, type ProfileField } from "@/lib/profile";
 import {
   BRAND_TONE_LABELS,
@@ -62,7 +62,7 @@ export function ProfileForm({ initial = null, onSave }: ProfileFormProps) {
               <input
                 name={field}
                 defaultValue={value}
-                className={controlClass}
+                className={controlClassFor(error !== undefined)}
                 aria-invalid={error !== undefined}
               />
             ) : (
@@ -70,7 +70,7 @@ export function ProfileForm({ initial = null, onSave }: ProfileFormProps) {
                 name={field}
                 defaultValue={value}
                 rows={rows}
-                className={controlClass}
+                className={controlClassFor(error !== undefined)}
                 aria-invalid={error !== undefined}
               />
             )}
@@ -82,7 +82,7 @@ export function ProfileForm({ initial = null, onSave }: ProfileFormProps) {
         <select
           name="brandTone"
           defaultValue={initial === null ? "" : initial.brandTone}
-          className={controlClass}
+          className={controlClassFor(errors.brandTone !== undefined)}
           aria-invalid={errors.brandTone !== undefined}
         >
           <option value="">Select a tone</option>

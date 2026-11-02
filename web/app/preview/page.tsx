@@ -5,7 +5,7 @@ import { DraftEditor } from "@/components/draft-editor";
 import { DraftList } from "@/components/draft-list";
 import { GeneratorPanel } from "@/components/generator-panel";
 import { ProfileForm } from "@/components/profile-form";
-import { Button, Card, Field, Stars, controlClass } from "@/components/ui";
+import { Button, Card, Field, Stars, controlClass, controlErrorClass } from "@/components/ui";
 import type {
   BusinessProfile,
   ContentType,
@@ -86,7 +86,11 @@ export default function PreviewPage() {
             <input className={controlClass} placeholder="you@example.com" />
           </Field>
           <Field label="Field with an error" error="This field is required">
-            <input className={controlClass} value="" readOnly />
+            <input
+              className={controlErrorClass}
+              placeholder="you can type in this one"
+              aria-invalid
+            />
           </Field>
           <Field label="Select control">
             <select className={controlClass} defaultValue="friendly">
