@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MissingEnvError, optionalEnv } from "@/lib/env";
+import { evaluateDraft } from "@/lib/evaluate";
 import {
   GEMINI_DEFAULT_MODEL,
   GEMINI_TEMPERATURE,
@@ -9,12 +10,14 @@ import {
 } from "@/lib/gemini";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 import { parseBusinessProfile, parseDraft } from "@/lib/rows";
+import { parseIdempotencyKey } from "@/lib/idempotency";
 import { supabaseServer } from "@/lib/supabase/server";
 import { MONTHLY_LIMIT, parseGenerationRequest } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const AI_FAILED = "The AI service could not generate content. Please try again.";
+const UNIQUE_VIOLATION = "23505";
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -37,6 +40,12 @@ export async function POST(request: Request) {
   }
   const input = parsed.value;
 
+  const idempotencyKey = parseIdempotencyKey(request.headers.get("idempotency-key"));
+  if (!idempotencyKey.ok) {
+    return fail(idempotencyKey.error, 400);
+  }
+  const key = idempotencyKey.value;
+
   let supabase: Awaited<ReturnType<typeof supabaseServer>>;
   try {
     supabase = await supabaseServer();
@@ -52,6 +61,21 @@ export async function POST(request: Request) {
     return fail("You must be logged in to generate content.", 401);
   }
   const user = auth.user;
+
+  if (key !== null) {
+    const { data: replayRow } = await supabase
+      .from("generated_content")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("idempotency_key", key)
+      .maybeSingle();
+    if (replayRow !== null) {
+      const replay = parseDraft(replayRow);
+      if (replay.ok) {
+        return NextResponse.json({ draft: replay.value }, { status: 200 });
+      }
+    }
+  }
 
   const { data: profileRow, error: profileError } = await supabase
     .from("business_profile")
@@ -120,6 +144,17 @@ export async function POST(request: Request) {
     return fail("The AI service did not respond. Please try again.", 504);
   }
 
+  const evaluation = evaluateDraft({
+    contentText: text,
+    contentType: input.contentType,
+    keywords: input.keywords,
+    brandTone: profile.value.brandTone,
+    rating: null,
+  });
+  if (!evaluation.ok) {
+    console.error(`Draft was not evaluated: ${evaluation.error}`);
+  }
+
   const { data: saved, error: saveError } = await supabase
     .from("generated_content")
     .insert({
@@ -132,10 +167,24 @@ export async function POST(request: Request) {
       temperature: GEMINI_TEMPERATURE,
       system_prompt: system.value,
       user_prompt: userPrompt.value,
+      analysis: evaluation.ok ? evaluation.value : null,
+      idempotency_key: key,
     })
     .select("*")
     .single();
   if (saveError !== null) {
+    if (key !== null && saveError.code === UNIQUE_VIOLATION) {
+      const { data: existing } = await supabase
+        .from("generated_content")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("idempotency_key", key)
+        .maybeSingle();
+      const replay = existing === null ? null : parseDraft(existing);
+      if (replay !== null && replay.ok) {
+        return NextResponse.json({ draft: replay.value }, { status: 200 });
+      }
+    }
     console.error(`Could not save the draft: ${saveError.message}`);
     return fail("The draft could not be saved. Please try again.", 500);
   }

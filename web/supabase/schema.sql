@@ -30,6 +30,7 @@ create table generated_content (
   temperature numeric not null,
   system_prompt text not null,
   user_prompt text not null,
+  idempotency_key text,
   created_at timestamptz not null default now(),
   constraint generated_content_rating_range check (rating is null or rating between 1 and 5),
   constraint generated_content_temperature_range check (temperature >= 0 and temperature <= 2)
@@ -37,6 +38,10 @@ create table generated_content (
 
 create index generated_content_user_created_idx
   on generated_content (user_id, created_at desc);
+
+create unique index generated_content_idempotency_idx
+  on generated_content (user_id, idempotency_key)
+  where idempotency_key is not null;
 
 alter table business_profile enable row level security;
 alter table generated_content enable row level security;

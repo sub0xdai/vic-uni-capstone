@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
@@ -79,6 +79,7 @@ export default function GeneratePage() {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const inFlight = useRef(false);
   const [note, setNote] = useState<Note | null>(null);
 
   useEffect(() => {
@@ -98,12 +99,19 @@ export default function GeneratePage() {
   }, []);
 
   async function generate() {
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
     setPending(true);
     setNote(null);
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": crypto.randomUUID(),
+        },
         body: JSON.stringify(value),
       });
       const payload: unknown = await response.json();
@@ -123,6 +131,7 @@ export default function GeneratePage() {
         text: "Could not reach the server. Check your connection and try again.",
       });
     } finally {
+      inFlight.current = false;
       setPending(false);
     }
   }
