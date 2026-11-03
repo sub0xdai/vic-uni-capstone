@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
 import { Card } from "@/components/ui";
+import { applyRating } from "@/lib/evaluate";
 import { parseBusinessProfile } from "@/lib/rows";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import { isContentType, type BusinessProfile, type Draft } from "@/lib/types";
@@ -166,15 +167,16 @@ export default function GeneratePage() {
       setNote({ kind: "error", text: client.error });
       return;
     }
+    const analysis = draft.analysis === null ? null : applyRating(draft.analysis, rating);
     const { error } = await client.value
       .from("generated_content")
-      .update({ rating })
+      .update(analysis === null ? { rating } : { rating, analysis })
       .eq("id", draft.id);
     if (error !== null) {
       setNote({ kind: "error", text: `Could not save the rating: ${error.message}` });
       return;
     }
-    setDraft({ ...draft, rating });
+    setDraft({ ...draft, rating, analysis });
   }
 
   return (

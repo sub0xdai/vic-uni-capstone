@@ -6,6 +6,7 @@ import { DraftList } from "@/components/draft-list";
 import { QualityCard } from "@/components/quality-card";
 import { Card, Stars } from "@/components/ui";
 import { parseDraft } from "@/lib/rows";
+import { applyRating } from "@/lib/evaluate";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import {
   CONTENT_TYPE_LABELS,
@@ -152,16 +153,21 @@ export default function DashboardPage() {
       setMessage(client.error);
       return;
     }
+    const target = drafts.find((draft) => draft.id === id);
+    if (target === undefined) {
+      return;
+    }
+    const analysis = target.analysis === null ? null : applyRating(target.analysis, rating);
     const { error } = await client.value
       .from("generated_content")
-      .update({ rating })
+      .update(analysis === null ? { rating } : { rating, analysis })
       .eq("id", id);
     if (error !== null) {
       setMessage(`Could not save the rating: ${error.message}`);
       return;
     }
     setDrafts((current) =>
-      current.map((draft) => (draft.id === id ? { ...draft, rating } : draft)),
+      current.map((draft) => (draft.id === id ? { ...draft, rating, analysis } : draft)),
     );
   }
 
