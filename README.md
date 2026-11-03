@@ -176,12 +176,15 @@ The proposal and design are written and marked.
 
 The application is built and merged: accounts, the brand profile, generation for all three content types, the editor, the dashboard, the quality score, and the provider port.
 
-The database exists with the schema applied.
-Nothing has been exercised end to end against it, in either direction: no two-user isolation run, and no generation from a signed in browser.
+The database exists with the schema applied, and the tenancy policies were verified on 3 November: two accounts, an unfiltered read as each returning one row, nothing without a token, a cross-tenant insert refused with 403, a cross-tenant update changing nothing, and one account's draft invisible to the other.
+`docs/plan/tenancy-check.md` records the checks and what they did not cover.
+
+Nothing has run through the browser against that project yet.
+`/api/generate`, the session guard and the pages are unexercised.
 
 Still open, and tracked in `docs/plan/build-plan.md`:
 
-- The isolation check above, which is ten minutes of work and the cheapest unverified claim in the project.
+- One generation and one rating from a signed in browser, which would exercise the route, the provider port and the score recompute against a real database.
 - A deployment. There is no public URL yet.
 - An API key for generation on the deployed build.
 - The evaluation experiment: human ratings against the computed scores, and an agreement statistic. The code no longer blocks it, since a rating now moves the score.
