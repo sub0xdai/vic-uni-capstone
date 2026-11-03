@@ -72,7 +72,6 @@ Ordered by critical path. Do not start a card whose dependency is still open.
 | W2.4 | Profile read and write | Daniel | `web/app/api/profile/route.ts` | Save writes one row, reload shows the saved values | 18 Oct |
 | W1.4a | Protected route check | Daniel | `web/proxy.ts` | Logged out, `GET /dashboard` redirects to `/login` | 18 Oct |
 | W3.3 | Dashboard draft list | Daniel | `web/components/draft-list.tsx` | Rows show type, topic, date, stars, and delete removes the row | 25 Oct |
-| W3.4 | Rating persistence | Semir | `web/app/api/rating/route.ts` | A rating survives a reload | 25 Oct |
 | W4.4 | Scoring stub quality card | Semir | `web/components/quality-card.tsx` | The card renders five metrics with placeholder scores | 25 Oct |
 | W4.1 | Error and timeout handling | Daniel | `web/app/api/generate/route.ts` | Remove the API key, a friendly error appears and input is kept | 1 Nov |
 | W4.2 | Seed demo data | Hailu | `web/supabase/seed.sql` | A fresh account has content to show | 1 Nov |
@@ -125,7 +124,7 @@ This table trails master, and that is deliberate rather than tidy.
 The rows below were added in November from commits and tests, not from memory.
 The remaining To do rows were never moved when their work merged, because the demonstration was the deadline and nobody closed the loop afterwards.
 Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have, and both outcomes are met from the browser client instead.
-`W3.4` moves here when PR 72 closes.
+`W3.4` is in Done below, closed with its pull request rather than by it, and the PR records the reasoning for Semir.
 
 | ID | Card | Note |
 |---|---|---|
@@ -152,6 +151,7 @@ Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have,
 | D23 | Generate route | `W2.3`, merged. Gemini behind the UTC monthly limit, with an idempotent replay on a repeated key |
 | D24 | Generator panel and editor | `W3.1` and `W3.2`, merged. Type tabs, topic, keywords, editable draft, copy and rating |
 | D25 | Local evaluation engine | `G2` met. Readability, tone, keyword and structure per content type, scored at generation, with the weights and the 0.6 threshold in `lib/score.ts` |
+| D26 | Rating persistence | `W3.4`, done on its behaviour: a rating has survived a reload since the editor and the dashboard landed. PR 72 closed, because the route it named would have been a third write path for one column |
 
 ---
 
