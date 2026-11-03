@@ -152,6 +152,7 @@ Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have,
 | D25 | Local evaluation engine | `G2` met. Readability, tone, keyword and structure per content type, scored at generation, with the weights and the 0.6 threshold in `lib/score.ts` |
 | D26 | Rating persistence | `W3.4`, done on its behaviour: a rating has survived a reload since the editor and the dashboard landed. PR 72 closed, because the route it named would have been a third write path for one column |
 | D27 | Tenancy verified on the live project | `W1.2` met. Two accounts, a profile each, unfiltered reads returning one row, none without a token, a cross-tenant insert refused with 403, a cross-tenant update affecting nothing, and a draft invisible to the other account. `docs/plan/tenancy-check.md` records the checks and what they do not cover |
+| D28 | Application path exercised on the live project | One blog outline generated, saved and rated through the browser. The rating moved the overall score, which the stored report only does through `applyRating`, so the route, the provider port, the write and the recompute all ran against the real database |
 
 ---
 
