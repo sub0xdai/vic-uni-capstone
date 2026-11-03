@@ -2,7 +2,15 @@
 
 Target: a deployed, clickable build covering brief items 1 to 5 by **1 November 2026**.
 
-Today is 2 October. The gate is the demonstration in the first week of the second unit. Everything before the gate line exists to make that demonstration work.
+The gate was the demonstration in the first week of the second unit, and it has passed. Everything before the gate line existed to make that demonstration work.
+
+Two things changed after the gate, and they are why the tables below read differently.
+
+The instructor returned five architectural recommendations on 3 November. Each is answered in `docs/design/response-to-feedback.md` with the measurement that decides it, and four of the five became cards under After the demonstration.
+
+`W1.2` turned out to have a live project behind it, though the two-user isolation check still has not run.
+
+Passing a demonstration is not a reason to stop measuring, so `G3` keeps its place and is restated with acceptance lines a reader can check.
 
 Scope is fixed at brief items 1 to 5: multi-tenant accounts, brand profile, content generator with three content types, LLM integration, and a content editor with save and dashboard.
 The evaluation engine stays a stub in the UI so the design still reads as designed, and gets built after the gate.
@@ -61,12 +69,8 @@ Ordered by critical path. Do not start a card whose dependency is still open.
 | C1 | Progress diary, this week onward | each person | `docs/diary/<name>/2026-W<nn>.md` | A dated entry per person per week | 11 Oct |
 | C2 | Weekly meeting minutes | rotating | `docs/meetings/2026-W<nn>.md` | One file per week, attendees and decisions | 11 Oct |
 | W2.1 | Brand profile form | Semir | `web/components/profile-form.tsx` | `/preview` shows five fields, empty submit shows inline errors | 18 Oct |
-| W2.2 | Content-type prompt templates | Jamal | `web/lib/prompts.ts` | The skipped acceptance test in `prompts.test.ts` is unskipped and passes | 18 Oct |
-| W2.3 | `/api/generate` route | Daniel | `web/app/api/generate/route.ts` | Posting a topic returns text and inserts a draft with its generation parameters | 18 Oct |
 | W2.4 | Profile read and write | Daniel | `web/app/api/profile/route.ts` | Save writes one row, reload shows the saved values | 18 Oct |
 | W1.4a | Protected route check | Daniel | `web/proxy.ts` | Logged out, `GET /dashboard` redirects to `/login` | 18 Oct |
-| W3.1 | Generator input panel | Daniel | `web/components/generator-panel.tsx` | Type selector, topic, keywords, Generate button, loading state | 25 Oct |
-| W3.2 | Draft editor and actions | Daniel | `web/components/draft-editor.tsx` | Editable text, copy works, rating saves | 25 Oct |
 | W3.3 | Dashboard draft list | Daniel | `web/components/draft-list.tsx` | Rows show type, topic, date, stars, and delete removes the row | 25 Oct |
 | W3.4 | Rating persistence | Semir | `web/app/api/rating/route.ts` | A rating survives a reload | 25 Oct |
 | W4.4 | Scoring stub quality card | Semir | `web/components/quality-card.tsx` | The card renders five metrics with placeholder scores | 25 Oct |
@@ -77,16 +81,34 @@ Ordered by critical path. Do not start a card whose dependency is still open.
 | W4.6 | Wake the Supabase project | Daniel | Supabase dashboard | Last activity is within 24 hours, not 7 days | 1 Nov |
 | W4.7 | Double-submit guard | Daniel | schema plus generate route | Two rapid clicks create one draft and one model call | after W4.1 |
 
-**Gate: working demonstration, 1 November**
+**Gate table: the demonstration in week one of the second unit, then the work that follows it**
 
 | ID | Card | Owner | File or area | Done when | By |
 |---|---|---|---|---|---|
 | G1 | Regenerate the five diagram PNGs | Jamal | PlantUML source in section 5 | Five images inserted, the stale `image10.png` removed | Nov |
-| G2 | Evaluation engine, local scoring | Daniel | `web/lib/evaluate.ts` | Readability, tone, keyword and structure metrics return 0 to 1 | Nov |
-| G3 | Evaluation experiment | Daniel | `docs/design/evaluation.md` | A labelled set, a human rating round, and an agreement statistic | Nov |
+| G3 | Evaluation experiment | Daniel | `docs/design/evaluation.md` | A labelled sample across the three content types, human ratings from people outside the build, Spearman for the ordinal scores and a kappa over pass and fail at the 0.6 threshold, the weakest metric named with evidence, and one prompt or weight change measured against the sample. Depends on `F1` | Nov |
 | G4 | Load test against the NFR targets | Daniel | `docs/design/loadtest.md` | Measured numbers, and the NFRs revised to match them | Nov |
 | G5 | Proposal gaps closed | all | sections 2, 3, 4, 9, 10 | `FR-` identifiers, MoSCoW, NFR measurement column, use case exception flows, risk register with owners | Nov |
 | G6 | Second unit deliverables | all | report, poster, diaries | Submitted | Nov |
+
+### After the demonstration
+
+Five recommendations came back from the instructor on 3 November.
+`docs/design/response-to-feedback.md` answers all five, including the one that is declined, because a reasoned no is cheaper to defend than five shallow builds.
+
+Four of them are cards here. The fifth is `G3` in the table above, restated with acceptance lines, and it now depends on `F1`.
+
+All four touch `supabase/schema.sql`, `web/lib/*` or a route handler, so they stay with Daniel and are not handed out.
+Order is dependency order, not interest order: `F3` needs the port to know which model's price to read, and `F4` needs a metric before a template version can be compared against anything.
+
+| ID | Card | Owner | File or area | Done when | Depends on |
+|---|---|---|---|---|---|
+| F1 | Satisfaction recompute on rating | Daniel | `web/lib/evaluate.ts`, the rating write paths | Rating a draft 5 of 5 stores an overall score that includes satisfaction 1.0, `assertQualityReport` passes on the stored row, and a test covers a draft unrated then rated | none |
+| F2 | Provider port | Daniel | `web/lib/generator.ts`, `web/lib/gemini.ts`, `app/api/generate/route.ts`, `docs/design/architecture.md` | The route imports the port and never the provider; provider, model and base URL resolve from config; an unknown provider fails at startup naming itself; the existing Gemini tests pass against the adapter unchanged | none |
+| F3 | Token usage and cost | Daniel | `supabase/schema.sql`, `app/api/generate/route.ts`, `app/dashboard/page.tsx` | Every draft stores the response `usageMetadata`; the dashboard shows month to date tokens and cost for the signed in user, read from a rate row keyed by model rather than a constant; the numbers are checked against one real response | F2 |
+| F4 | Prompt templates as data | Daniel | `supabase/schema.sql`, `web/lib/prompts.ts`, `web/lib/prompts.test.ts` | The active template resolves from the table with a fallback to the seeded constants; each draft stamps `prompt_version`; a test fails when an active template stops mentioning the structure its content type is scored on | G3 |
+
+Declined, with the reasons recorded in the response document: a prompt editing dashboard, a cache layer, shortening prompts for cost, and an agent layer for personalisation.
 
 ### In progress
 
@@ -98,6 +120,12 @@ A card belongs here when it is verifiable, not when a file exists.
 Scaffolding counts, because a scaffold is either building or it is not.
 A feature does not count until it has been exercised.
 The schema is the clearest example: it is written, it has never been run against a database, so `W1.2` stays open until the two-user isolation test passes.
+
+This table trails master, and that is deliberate rather than tidy.
+The rows below were added in November from commits and tests, not from memory.
+The remaining To do rows were never moved when their work merged, because the demonstration was the deadline and nobody closed the loop afterwards.
+Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have, and both outcomes are met from the browser client instead.
+`W3.4` moves here when PR 72 closes.
 
 | ID | Card | Note |
 |---|---|---|
@@ -119,6 +147,11 @@ The schema is the clearest example: it is written, it has never been run against
 | D18 | Proposal audited | Findings recorded in `docs/plan/review-notes.md` |
 | D19 | Implementation gap identified | No code existed seven months after NIT3003, recorded in `docs/plan/review-notes.md` |
 | D20 | Board cards created | 43 issues and 7 labels, seeded from this document |
+| D21 | Instructor feedback answered | Five architectural recommendations answered in `docs/design/response-to-feedback.md`, each with the measurement from the build that decides it |
+| D22 | Content-type prompt templates | `W2.2`, merged. Three templates, the skipped acceptance test unskipped and passing |
+| D23 | Generate route | `W2.3`, merged. Gemini behind the UTC monthly limit, with an idempotent replay on a repeated key |
+| D24 | Generator panel and editor | `W3.1` and `W3.2`, merged. Type tabs, topic, keywords, editable draft, copy and rating |
+| D25 | Local evaluation engine | `G2` met. Readability, tone, keyword and structure per content type, scored at generation, with the weights and the 0.6 threshold in `lib/score.ts` |
 
 ---
 
@@ -203,10 +236,11 @@ Each issue needs three things, or a teammate will stall: the exact file they may
 
 If two things conflict, the order is fixed.
 
-1. A working demonstration on 1 November.
+1. A live Supabase project and a deployment. Nothing is proven end to end without them, and every claim in the report is inference until they exist.
 2. The diary and minutes, on time, every week.
-3. The proposal gaps.
-4. The evaluation engine, and with it the case for a high distinction.
+3. The instructor's feedback, `F1` through `F4`, in dependency order.
+4. The evaluation experiment, `G3`, and with it the case for a high distinction.
+5. The proposal gaps, `G5`.
 
 Nothing below the line happens until everything above it is safe.
 
