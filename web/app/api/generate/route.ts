@@ -157,7 +157,8 @@ export async function POST(request: Request) {
     }
     return fail(route.message, route.status);
   }
-  const text = generated.value;
+  const output = generated.value;
+  const text = output.text;
 
   const evaluation = evaluateDraft({
     contentText: text,
@@ -183,6 +184,7 @@ export async function POST(request: Request) {
       system_prompt: system.value,
       user_prompt: userPrompt.value,
       analysis: evaluation.ok ? evaluation.value : null,
+      usage: output.usage,
       idempotency_key: key,
     })
     .select("*")

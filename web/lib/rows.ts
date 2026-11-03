@@ -11,9 +11,11 @@ import {
   type Draft,
   type DraftStatus,
   type GenerationParameters,
+  type ModelRate,
   type QualityMetric,
   type QualityReport,
   type Result,
+  type TokenUsage,
 } from "./types.ts";
 
 type Row = Record<string, unknown>;
@@ -124,6 +126,39 @@ export function parseBusinessProfile(value: unknown): Result<BusinessProfile> {
   });
 }
 
+export function parseUsage(value: unknown): TokenUsage | null {
+  const source = row(value);
+  if (source === null) {
+    return null;
+  }
+  const input = source.inputTokens;
+  const output = source.outputTokens;
+  if (typeof input !== "number" || typeof output !== "number") {
+    return null;
+  }
+  if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0) {
+    return null;
+  }
+  return { inputTokens: input, outputTokens: output };
+}
+
+export function parseModelRate(value: unknown): Result<ModelRate> {
+  const source = row(value);
+  if (source === null) {
+    return err("model_rate row is not an object");
+  }
+  const model = text(source, "model");
+  const input = number(source, "input_per_million");
+  const output = number(source, "output_per_million");
+  if (model === null) {
+    return err("model_rate row is missing a model");
+  }
+  if (input === null || output === null || input < 0 || output < 0) {
+    return err(`model_rate for ${model} has no usable price`);
+  }
+  return ok({ model, inputPerMillion: input, outputPerMillion: output });
+}
+
 export function parseDraft(value: unknown): Result<Draft> {
   const source = row(value);
   if (source === null) {
@@ -167,6 +202,7 @@ export function parseDraft(value: unknown): Result<Draft> {
     statusChangedAt: text(source, "status_changed_at"),
     analysis: parseQualityReport(source.analysis),
     parameters: parseParameters(source),
+    usage: parseUsage(source.usage),
     createdAt,
   });
 }

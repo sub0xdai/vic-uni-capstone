@@ -1,5 +1,12 @@
 import { invariant } from "./assert.ts";
-import { err, ok, type GenerationFailure, type Result } from "./types.ts";
+import {
+  err,
+  ok,
+  type GeneratedText,
+  type GenerationFailure,
+  type Result,
+  type TokenUsage,
+} from "./types.ts";
 
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 export const GEMINI_MAX_OUTPUT_TOKENS = 1024;
@@ -75,12 +82,30 @@ export function extractGeminiText(value: unknown): Result<string> {
   return joined.length > 0 ? ok(joined) : err("gemini returned no text");
 }
 
+export function extractGeminiUsage(value: unknown): TokenUsage | null {
+  const root = record(value);
+  const usage = record(root?.usageMetadata);
+  if (usage === null) {
+    return null;
+  }
+  const input = usage.promptTokenCount;
+  const output = usage.candidatesTokenCount;
+  if (typeof input !== "number" || typeof output !== "number") {
+    return null;
+  }
+  if (!Number.isFinite(input) || !Number.isFinite(output)) {
+    return null;
+  }
+  invariant(input >= 0 && output >= 0, `token counts went negative: ${input} ${output}`);
+  return { inputTokens: input, outputTokens: output };
+}
+
 export async function geminiGenerate(
   apiKey: string, // @waiver PII: a parameter, not a value
   model: string,
   baseUrl: string,
   request: GeminiRequest,
-): Promise<Result<string, GenerationFailure>> {
+): Promise<Result<GeneratedText, GenerationFailure>> {
   invariant(apiKey.trim().length > 0, "gemini api key is empty");
   let response: Response;
   try {
@@ -111,5 +136,5 @@ export async function geminiGenerate(
   if (!extracted.ok) {
     return err({ kind: "unusable", detail: extracted.error });
   }
-  return ok(extracted.value);
+  return ok({ text: extracted.value, usage: extractGeminiUsage(payload) });
 }

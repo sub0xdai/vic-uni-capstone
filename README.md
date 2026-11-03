@@ -95,6 +95,21 @@ A project exists with this schema applied, including the `idempotency_key` colum
 The credentials are in `web/.env.local`, which is not committed.
 Supabase pauses a Free plan project after 7 days without activity, and waking it is a manual dashboard action, so check it answers before a demonstration.
 
+### Applying a change to an existing project
+
+`schema.sql` creates the whole database, so it is for a fresh project.
+An existing one takes the dated file instead, run the same way.
+
+`web/supabase/2026-11-03-usage-and-rates.sql` adds the `usage` column and the `model_rate` table.
+Until it runs, generation fails to save, because the route writes `usage` on every draft.
+
+Prices are data, not code, so the dashboard reads them from `model_rate` rather than a constant.
+The seeded rate for `gemini-3.5-flash-lite` is a placeholder: replace it with the provider's published price before quoting a cost figure anywhere.
+
+```sql
+update model_rate set input_per_million = 0.10, output_per_million = 0.40 where model = 'gemini-3.5-flash-lite';
+```
+
 ### The isolation check
 
 The tenancy rule has not been verified on that project yet.
@@ -140,6 +155,7 @@ Everyone else needs one approval.
 - Draft editing, copy, star ratings, delete, publish and discard, and a dashboard with the monthly usage.
 - A quality report per draft, stored with it and shown on the dashboard.
 - The report is recomputed when a rating is saved, so the metric that carries 35 percent of the weight is no longer frozen at its unrated value.
+- Token usage per draft, from the provider's own count, and an estimated cost for the month on the dashboard.
 
 The quality report is computed locally in `web/lib/evaluate.ts`.
 Readability comes from a reading-ease formula, keywords from coverage, structure from per-type checks, tone from a word-marker heuristic, and satisfaction from the star rating.
@@ -187,5 +203,5 @@ Still open, and tracked in `docs/plan/build-plan.md`:
 - A deployment. There is no public URL yet.
 - An API key for generation on the deployed build.
 - The evaluation experiment: human ratings against the computed scores, and an agreement statistic. The code no longer blocks it, since a rating now moves the score.
-- The remaining instructor cards: token usage and cost, and prompt templates as data.
+- The remaining instructor cards: prompt templates as data, and the personalisation work the response document declines for this unit.
 - A load test against the non functional requirements.

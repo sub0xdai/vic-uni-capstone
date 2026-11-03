@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { extractGeminiText, geminiBody, geminiUrl } from "./gemini.ts";
+import { extractGeminiText, extractGeminiUsage, geminiBody, geminiUrl } from "./gemini.ts";
 
 test("extractGeminiText joins the text parts", () => {
   const result = extractGeminiText({
@@ -46,4 +46,18 @@ test("geminiBody carries both prompts and the temperature", () => {
   assert.equal(body.systemInstruction.parts[0]?.text, "system text");
   assert.equal(body.contents[0]?.parts[0]?.text, "user text");
   assert.equal(body.generationConfig.temperature, 0.5);
+});
+
+test("usage is read from usageMetadata", () => {
+  const usage = extractGeminiUsage({
+    usageMetadata: { promptTokenCount: 190, candidatesTokenCount: 240, totalTokenCount: 430 },
+  });
+  assert.deepEqual(usage, { inputTokens: 190, outputTokens: 240 });
+});
+
+test("usage is absent, not zero, when the provider does not report it", () => {
+  assert.equal(extractGeminiUsage({ candidates: [] }), null);
+  assert.equal(extractGeminiUsage({ usageMetadata: {} }), null);
+  assert.equal(extractGeminiUsage({ usageMetadata: { promptTokenCount: 5 } }), null);
+  assert.equal(extractGeminiUsage(null), null);
 });

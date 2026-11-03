@@ -49,11 +49,12 @@ const DRAFT: Draft = {
   statusChangedAt: null,
   analysis: ANALYSIS,
   parameters: {
-    model: "gpt-4o-mini",
+    model: "gemini-3.5-flash-lite",
     temperature: 0.7,
     systemPrompt: "You are a marketing content specialist for a small business.",
     userPrompt: "Write a social caption about the single origin Ethiopian launch.",
   },
+  usage: { inputTokens: 190, outputTokens: 240 },
   createdAt: new Date("2026-10-02T09:00:00Z").toISOString(),
 };
 
@@ -83,7 +84,7 @@ export default function PreviewPage() {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Example field" hint="hint text sits under the control">
-            <input className={controlClass} placeholder="you@example.com" />
+            <input className={controlClass} placeholder="your email address" />
           </Field>
           <Field label="Field with an error" error="This field is required">
             <input

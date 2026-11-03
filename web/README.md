@@ -42,9 +42,14 @@ pnpm build    # production build
 
 ## Database
 
-The schema is `supabase/schema.sql`.
-Paste the whole file into the Supabase SQL editor and run it.
-It creates the tables, the row level security policies, the grants the roles need, and the unique index that stops one click producing two drafts.
+The schema is `supabase/schema.sql`, for a fresh project.
+An existing project takes `supabase/2026-11-03-usage-and-rates.sql`, which adds the `usage` column and the `model_rate` table.
+Paste it into the SQL editor and run it.
+Without it, generation cannot save a draft.
+
+`generated_content.usage` holds the provider's own token count for the draft.
+`model_rate` holds a price per million tokens for each model, so the dashboard's cost figure is data rather than a constant copied into the code.
+The seeded rate is a placeholder to replace with the provider's published price.
 
 `generated_content.idempotency_key` carries a per-request key from the browser.
 The route replays an existing draft when it sees a key it already saved, so a double click or a retry returns the first draft instead of making a second one.
@@ -66,4 +71,5 @@ Change them deliberately, not while working on a card.
 
 `lib/evaluate.ts` computes the quality report, and `applyRating` recomputes it when a rating is saved.
 `lib/score.ts` holds the weights and the threshold and checks that a report adds up.
+`lib/usage.ts` sums token usage for the month and prices it from the `model_rate` table.
 `lib/generator.ts` is the port every caller uses for generation, and `lib/gemini.ts` is the only module that knows what Gemini's request and response look like.
