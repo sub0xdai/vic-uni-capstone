@@ -8,7 +8,7 @@ Two things changed after the gate, and they are why the tables below read differ
 
 The instructor returned five architectural recommendations on 3 November. Each is answered in `docs/design/response-to-feedback.md` with the measurement that decides it, and four of the five became cards under After the demonstration.
 
-`W1.2` turned out to have a live project behind it, though the two-user isolation check still has not run.
+`W1.2` turned out to have a live project behind it, and the two-user isolation check ran on 3 November: every tenancy policy held. The evidence is `docs/plan/tenancy-check.md`.
 
 Passing a demonstration is not a reason to stop measuring, so `G3` keeps its place and is restated with acceptance lines a reader can check.
 
@@ -61,7 +61,6 @@ Ordered by critical path. Do not start a card whose dependency is still open.
 | ID | Card | Owner | File or area | Done when | By |
 |---|---|---|---|---|---|
 | C0 | How to work on a card | everyone | this document | You have run the app and seen `/preview` | before you start |
-| W1.2 | Supabase project, schema applied, RLS verified | Daniel | `web/supabase/schema.sql` | Two users, insert a profile each, read as user A, one row comes back | 11 Oct |
 | W1.1 | Fill `.env.local`, deploy to Vercel | Daniel | Vercel project settings | A public URL serves the app | 11 Oct |
 | W1.3 | Auth screens: sign up, log in, log out | Hailu | `web/app/(auth)/*` | A new account can register and reach onboarding | 11 Oct |
 | W1.4b | Host pages behind auth | Daniel | `web/app/(app)/{dashboard,generate,onboarding}` | Each page renders its shell while logged in | 11 Oct |
@@ -118,7 +117,7 @@ Empty. Nothing started that is unfinished.
 A card belongs here when it is verifiable, not when a file exists.
 Scaffolding counts, because a scaffold is either building or it is not.
 A feature does not count until it has been exercised.
-The schema is the clearest example: it is written, it has never been run against a database, so `W1.2` stays open until the two-user isolation test passes.
+The schema is the clearest example: it was written and never run against a database, so `W1.2` stayed open until the two-user isolation test passed. That test ran on 3 November and every policy held, recorded in `docs/plan/tenancy-check.md`.
 
 This table trails master, and that is deliberate rather than tidy.
 The rows below were added in November from commits and tests, not from memory.
@@ -152,6 +151,7 @@ Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have,
 | D24 | Generator panel and editor | `W3.1` and `W3.2`, merged. Type tabs, topic, keywords, editable draft, copy and rating |
 | D25 | Local evaluation engine | `G2` met. Readability, tone, keyword and structure per content type, scored at generation, with the weights and the 0.6 threshold in `lib/score.ts` |
 | D26 | Rating persistence | `W3.4`, done on its behaviour: a rating has survived a reload since the editor and the dashboard landed. PR 72 closed, because the route it named would have been a third write path for one column |
+| D27 | Tenancy verified on the live project | `W1.2` met. Two accounts, a profile each, unfiltered reads returning one row, none without a token, a cross-tenant insert refused with 403, a cross-tenant update affecting nothing, and a draft invisible to the other account. `docs/plan/tenancy-check.md` records the checks and what they do not cover |
 
 ---
 
