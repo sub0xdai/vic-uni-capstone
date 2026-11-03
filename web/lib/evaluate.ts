@@ -1,5 +1,5 @@
 import { invariant } from "./assert.ts";
-import { assertQualityReport, weightedScore } from "./score.ts";
+import { assertQualityReport, metricsOf, weightedScore } from "./score.ts";
 import {
   RATING_MAX,
   type BrandTone,
@@ -201,4 +201,13 @@ export function evaluateDraft(input: EvaluationInput): Result<QualityReport> {
   const report: QualityReport = { ...metrics, overallScore: weightedScore(metrics) };
   assertQualityReport(report);
   return ok(report);
+}
+
+export function applyRating(report: QualityReport, rating: number): QualityReport {
+  invariant(report !== null && typeof report === "object", "quality report is not an object");
+  assertQualityReport(report);
+  const metrics = { ...metricsOf(report), userSatisfactionScore: satisfactionFrom(rating) };
+  const next: QualityReport = { ...metrics, overallScore: weightedScore(metrics) };
+  assertQualityReport(next);
+  return next;
 }

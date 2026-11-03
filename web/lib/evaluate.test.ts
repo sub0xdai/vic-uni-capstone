@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyRating,
   evaluateDraft,
   keywordCoverage,
   readabilityScore,
@@ -8,8 +9,8 @@ import {
   structureScore,
   toneAlignment,
 } from "./evaluate.ts";
-import { weightedScore } from "./score.ts";
-import { QUALITY_METRICS, QUALITY_THRESHOLD } from "./types.ts";
+import { assertQualityReport, weightedScore } from "./score.ts";
+import { QUALITY_METRICS, QUALITY_THRESHOLD, type QualityReport } from "./types.ts";
 
 const BLOG = `Introduction
 We help cafe owners fill quiet afternoons.
@@ -129,4 +130,51 @@ test("an empty or tiny draft is refused instead of scored", () => {
     rating: null,
   });
   assert.equal(tiny.ok, false);
+});
+
+function unrated(): QualityReport {
+  const result = evaluateDraft({
+    contentText: BLOG,
+    contentType: "blog_outline",
+    keywords: ["tasting flight"],
+    brandTone: "casual",
+    rating: null,
+  });
+  if (!result.ok) {
+    throw new Error(result.error);
+  }
+  return result.value;
+}
+
+test("a rating recomputes the overall score and leaves the other metrics alone", () => {
+  const before = unrated();
+  const after = applyRating(before, 5);
+  assert.equal(after.userSatisfactionScore, 1);
+  assert.ok(Math.abs(after.overallScore - before.overallScore - 0.175) < 1e-9);
+  assert.equal(after.readabilityScore, before.readabilityScore);
+  assert.equal(after.toneScore, before.toneScore);
+  assert.equal(after.keywordScore, before.keywordScore);
+  assert.equal(after.structureScore, before.structureScore);
+  assertQualityReport(after);
+});
+
+test("a low rating lowers the score by the weight satisfaction carries", () => {
+  const before = unrated();
+  const after = applyRating(before, 1);
+  assert.equal(after.userSatisfactionScore, 0.2);
+  assert.ok(Math.abs(before.overallScore - after.overallScore - 0.105) < 1e-9);
+  assertQualityReport(after);
+});
+
+test("a rating outside the scale is refused instead of written", () => {
+  const report = unrated();
+  assert.throws(() => applyRating(report, 0));
+  assert.throws(() => applyRating(report, 6));
+  assert.throws(() => applyRating(report, 3.5));
+});
+
+test("a report whose overall score had drifted is refused before it is rewritten", () => {
+  const report = unrated();
+  const drifted: QualityReport = { ...report, overallScore: report.overallScore + 0.2 };
+  assert.throws(() => applyRating(drifted, 5));
 });
