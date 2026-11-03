@@ -79,6 +79,7 @@ export type Draft = {
   statusChangedAt: string | null;
   analysis: QualityReport | null;
   parameters: GenerationParameters | null;
+  usage: TokenUsage | null;
   createdAt: string;
 };
 
@@ -93,6 +94,22 @@ export type GenerationFailure =
   | { kind: "unreachable"; detail: string }
   | { kind: "upstream"; status: number }
   | { kind: "unusable"; detail: string };
+
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type GeneratedText = {
+  text: string;
+  usage: TokenUsage | null;
+};
+
+export type ModelRate = {
+  model: string;
+  inputPerMillion: number;
+  outputPerMillion: number;
+};
 
 export type Ok<T> = { ok: true; value: T };
 export type Err<E> = { ok: false; error: E };

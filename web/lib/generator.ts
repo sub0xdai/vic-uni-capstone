@@ -1,7 +1,7 @@
 import { invariant } from "./assert.ts";
 import { optionalEnv, requireEnv } from "./env.ts";
 import { GEMINI_BASE_URL, geminiGenerate } from "./gemini.ts";
-import type { GenerationFailure, Result } from "./types.ts";
+import type { GeneratedText, GenerationFailure, Result } from "./types.ts";
 
 export const GENERATION_TEMPERATURE = 0.7;
 export const GENERATOR_DEFAULT_PROVIDER = "gemini";
@@ -24,7 +24,7 @@ export type ContentGenerator = {
   provider: string;
   model: string;
   baseUrl: string;
-  generate: (request: GeneratorRequest) => Promise<Result<string, GenerationFailure>>;
+  generate: (request: GeneratorRequest) => Promise<Result<GeneratedText, GenerationFailure>>;
 };
 
 export function createGenerator(settings: GeneratorSettings): ContentGenerator {

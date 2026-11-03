@@ -6,6 +6,17 @@ For each piece of work: what I meant to do, what I actually did, how I know it w
 I write down the reason for a decision too, because the reason is what I will have forgotten by November.
 Entries get added when something finishes, even if that is late.
 
+## Where things stand, 3 November 2026
+
+- `master` is at `06bf0eb` and matches GitHub. Eight pull requests merged today, one closed, one open, and the open one is mine.
+- The checks pass: 76 tests on master, 86 on the open F3 branch, typecheck and lint clean.
+- The instructor's five architectural recommendations are answered in `docs/design/response-to-feedback.md`, and four of them are cards F1 to F4.
+  F1 and F2 are merged. F3 is open. F4 waits on the evaluation experiment.
+- The tenancy rules ran against the live project for the first time and held, recorded in `docs/plan/tenancy-check.md`.
+- A blog outline was generated and rated through the browser, and the score moved when it was rated.
+  That was the last unverified claim in the report.
+- Not done: F3 is not merged, because its migration has to run on the live project first. Nothing is deployed, nothing is load tested, and the evaluation experiment still has no raters.
+
 ## Where things stand, 2 November 2026
 
 - `master` is at `4f4953b` and matches GitHub.
@@ -16,6 +27,61 @@ Entries get added when something finishes, even if that is late.
 - Both READMEs and the working agreements now describe the build that exists.
 - Not done: the grants query has to be run by whoever holds the Supabase project.
   Nothing has been exercised end to end against a live database, deployed, or load tested.
+
+## 3 November 2026 - the feedback answered, the tenancy proved, five merges
+
+Meant to: answer the instructor's architecture feedback with something measurable, and stop guessing about the database.
+
+The feedback arrived as five recommendations: dynamic prompts, cost engineering, provider flexibility, contextual personalisation, feedback loops.
+I wrote `docs/design/response-to-feedback.md` answering each against the build rather than against the proposal, and declined two with reasons.
+Prompt shortening is declined on arithmetic: a 76-word system prompt and a 47 to 60-word user prompt is about 190 input tokens against a 1024-token output cap, so cutting the prompt by a third saves under 5 percent of a call.
+An agent layer for personalisation is declined because the route already fetches the profile row and injects it, and the missing piece is two columns, not a service.
+The other three became F1, F2 and F3, and the fifth is G3, which was already carded.
+
+The evaluation gap is the one the first reviewer named, so I ordered the cards to protect it.
+G3 needs real drafts and human ratings, and it cannot start while the score ignores ratings.
+That was F1: satisfaction carries 35 percent of the weight and was computed once, from a null rating, so every stored report held the neutral 0.5 forever.
+`applyRating` now replaces that one metric, re-derives the overall score from the weights, and validates both the report it received and the report it returns.
+My first version silently repaired a drifted report instead of refusing it, and a test caught it. Refusing is the point of `lib/score.ts`.
+
+F2 was the claim in `architecture.md` 3.7 that the provider boundary existed. It did not.
+`lib/generator.ts` is now the port, `lib/gemini.ts` the only module that knows Gemini's shapes, and provider, model and base URL resolve from configuration.
+The build started on OpenAI and moved to Gemini, which is exactly why the boundary matters and why the five diagrams in section 5 are now a stale drawing rather than a stale design.
+
+Then the database.
+The README said there was no live project. There was one, so I probed it over REST: both tables answered, and `generated_content` had `idempotency_key`, so the schema and Semir's migration had landed.
+The isolation test had never run, and the README described it as something you can see in the app, which is wrong: every page adds `.eq("user_id", ...)`, so a working filter and a working policy look identical in a browser.
+I ran it as an unfiltered query with each user's own token.
+One row each, nothing without a token, a cross-tenant insert refused with 403, a cross-tenant update changing nothing, and a draft invisible to the other account.
+The tenancy claim in the report is now measured.
+
+How I know: nine commits, `b19d9c4` for the scan, `3623eac` for the answer and the cards, `e1d5d31` for F1, `b686fc4` for F2, `6f21b6c` for the board, `8cb15e2` for the READMEs, `41a4657` for the tenancy record, `06bf0eb` for the browser path, and `586f131` for F3, which is still open.
+76 tests pass on master and 86 on the F3 branch.
+Generating 187 input and 96 output tokens priced at $0.000057, which is the arithmetic the cost work rests on.
+
+The PII scan landed too, because the project had no hook and the code has a key path in it.
+Presidio's default wants a 600 MB spaCy model and tries to download it by shelling out to `uv`, which failed silently here and would have blocked every commit, so it uses `en_core_web_sm` from a pinned wheel.
+The scan also fires on any field named `apiKey`, because the pattern is deliberately blunt, so ten lines carry a waiver saying which kind of non-secret each one is.
+
+Decided:
+
+- Close Semir's rating route instead of merging it.
+  Rating is the only write with nothing server-side in it, and the browser already writes profile, draft text, status and delete straight to Supabase.
+  One API route for one column makes rating the odd one out and leaves two ways to write the same field.
+- Card the feedback rather than build all five.
+  Five shallow items would leave the evaluation experiment unbuilt, and that is the assessed gap.
+- Put prices in a table, and label the seeded number a placeholder.
+  There is no published price to copy for a model whose name is a placeholder, and inventing one quietly is worse than saying so.
+- Keep the hook's exit 0 when `.venv` is missing.
+  It is the canonical behaviour, so a clone without Python is not blocked from committing, even though the scan does not run.
+
+Mistakes worth keeping:
+
+- I told myself the project had zero users. The listing call returned 401 because `SUPABASE_SERVICE_ROLE_KEY` is empty, and `jq` turned the error into `[]`, which I read as an empty list.
+  The test still stands, because each account saw exactly one row, but the claim was wrong when I made it.
+- The hook exiting 0 without a venv is the kind of guard that passes by not running. I only noticed because I re-ran it in a fresh worktree.
+- My global `~/.config/uv/uv.toml` was invalid, and I worked around it with `--no-config` for an hour before reading the message properly. It broke every `uv` command on the machine, not just here.
+- I left a placeholder shaped like an email address in the preview gallery, and the scan refused my own commit. The placeholder is now words instead of an address.
 
 ## 2 November 2026 - the gate, two missing pieces, and a run I could check
 

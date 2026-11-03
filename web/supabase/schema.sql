@@ -43,6 +43,20 @@ create unique index generated_content_idempotency_idx
   on generated_content (user_id, idempotency_key)
   where idempotency_key is not null;
 
+create table model_rate (
+  model text primary key,
+  input_per_million numeric not null,
+  output_per_million numeric not null,
+  updated_at timestamptz not null default now(),
+  constraint model_rate_price_range check (
+    input_per_million >= 0 and output_per_million >= 0
+  )
+);
+
+insert into model_rate (model, input_per_million, output_per_million)
+values ('gemini-3.5-flash-lite', 0.10, 0.40)
+on conflict (model) do nothing;
+
 alter table business_profile enable row level security;
 alter table generated_content enable row level security;
 

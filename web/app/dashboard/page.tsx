@@ -5,8 +5,9 @@ import Link from "next/link";
 import { DraftList } from "@/components/draft-list";
 import { QualityCard } from "@/components/quality-card";
 import { Card, Stars } from "@/components/ui";
-import { parseDraft } from "@/lib/rows";
+import { parseDraft, parseModelRate } from "@/lib/rows";
 import { applyRating } from "@/lib/evaluate";
+import { monthlySpend } from "@/lib/usage";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import {
   CONTENT_TYPE_LABELS,
@@ -16,6 +17,7 @@ import {
   ok,
   type Draft,
   type DraftStatus,
+  type ModelRate,
   type Result,
 } from "@/lib/types";
 
@@ -76,6 +78,7 @@ function Tile({
 
 export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [rates, setRates] = useState<ModelRate[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now] = useState(() => new Date());
@@ -132,6 +135,33 @@ export default function DashboardPage() {
       active = false;
     };
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    const client = supabaseBrowserResult();
+    if (!client.ok) {
+      return;
+    }
+    void client.value
+      .from("model_rate")
+      .select("*")
+      .then(({ data, error }) => {
+        if (!active || error !== null || data === null) {
+          return;
+        }
+        const parsed: ModelRate[] = [];
+        for (const item of data) {
+          const rate = parseModelRate(item);
+          if (rate.ok) {
+            parsed.push(rate.value);
+          }
+        }
+        setRates(parsed);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function remove(id: string) {
     const client = supabaseBrowserResult();
@@ -221,6 +251,11 @@ export default function DashboardPage() {
   const usedThisMonth = countThisMonth(drafts, now);
   const limitReached = usedThisMonth >= MONTHLY_LIMIT;
   const favourites = favouriteDrafts(drafts);
+  const spend = monthlySpend(drafts, rates, now);
+  const costLine =
+    spend.cost === null
+      ? "No rate on record for this model."
+      : `Estimated cost $${spend.cost < 0.01 ? spend.cost.toFixed(6) : spend.cost.toFixed(4)}.`;
 
   return (
     <main className="mx-auto w-full max-w-4xl space-y-6 p-6">
@@ -261,6 +296,10 @@ export default function DashboardPage() {
             alert={limitReached}
           />
         </dl>
+        <p className="mt-3 text-sm text-slate-500">
+          {`This month: ${spend.tokens.inputTokens.toLocaleString()} input tokens, `}
+          {`${spend.tokens.outputTokens.toLocaleString()} output tokens. ${costLine}`}
+        </p>
         {limitReached ? (
           <p className="mt-3 text-sm text-red-600" role="alert">
             You have reached your monthly generation limit.
