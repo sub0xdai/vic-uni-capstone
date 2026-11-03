@@ -8,14 +8,14 @@ Entries get added when something finishes, even if that is late.
 
 ## Where things stand, 3 November 2026
 
-- `master` is at `06bf0eb` and matches GitHub. Eight pull requests merged today, one closed, one open, and the open one is mine.
+- `master` is at `7de2d90` and matches GitHub. Nine pull requests merged today, two closed, none open.
 - The checks pass: 76 tests on master, 86 on the open F3 branch, typecheck and lint clean.
 - The instructor's five architectural recommendations are answered in `docs/design/response-to-feedback.md`, and four of them are cards F1 to F4.
-  F1 and F2 are merged. F3 is open. F4 waits on the evaluation experiment.
+  F1, F2 and F3 are merged. F4 waits on the evaluation experiment.
 - The tenancy rules ran against the live project for the first time and held, recorded in `docs/plan/tenancy-check.md`.
 - A blog outline was generated and rated through the browser, and the score moved when it was rated.
   That was the last unverified claim in the report.
-- Not done: F3 is not merged, because its migration has to run on the live project first. Nothing is deployed, nothing is load tested, and the evaluation experiment still has no raters.
+- Not done: the `usage` migration has not run on the live project yet, so generating from `master` would fail to save a draft. Nothing is deployed, nothing is load tested, and the evaluation experiment still has no raters.
 
 ## Where things stand, 2 November 2026
 
@@ -82,6 +82,9 @@ Mistakes worth keeping:
 - The hook exiting 0 without a venv is the kind of guard that passes by not running. I only noticed because I re-ran it in a fresh worktree.
 - My global `~/.config/uv/uv.toml` was invalid, and I worked around it with `--no-config` for an hour before reading the message properly. It broke every `uv` command on the machine, not just here.
 - I left a placeholder shaped like an email address in the preview gallery, and the scan refused my own commit. The placeholder is now words instead of an address.
+- I branched the handoff off F3's tip instead of off master, so its squash (`7de2d90`) carried a whole card into master with it.
+  The tree is right and 86 tests pass, but the history now shows one commit doing two unrelated things, which is the one thing squash merging is supposed to prevent.
+  The habit that fixes it is mechanical: check out master before creating a branch.
 
 ## 2 November 2026 - the gate, two missing pieces, and a run I could check
 
