@@ -179,12 +179,11 @@ The application is built and merged: accounts, the brand profile, generation for
 The database exists with the schema applied, and the tenancy policies were verified on 3 November: two accounts, an unfiltered read as each returning one row, nothing without a token, a cross-tenant insert refused with 403, a cross-tenant update changing nothing, and one account's draft invisible to the other.
 `docs/plan/tenancy-check.md` records the checks and what they did not cover.
 
-Nothing has run through the browser against that project yet.
-`/api/generate`, the session guard and the pages are unexercised.
+One generation and one rating have since run through the browser: a blog outline generated, saved, and rated, with the overall score moving when the rating was set.
+That exercises `/api/generate`, the provider port, the RLS write and the score recompute together, on the real project.
 
 Still open, and tracked in `docs/plan/build-plan.md`:
 
-- One generation and one rating from a signed in browser, which would exercise the route, the provider port and the score recompute against a real database.
 - A deployment. There is no public URL yet.
 - An API key for generation on the deployed build.
 - The evaluation experiment: human ratings against the computed scores, and an agreement statistic. The code no longer blocks it, since a rating now moves the score.
