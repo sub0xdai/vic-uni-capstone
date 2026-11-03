@@ -134,9 +134,17 @@ Three enforcement layers, one definition.
 
 `lib/supabase/server.ts` and `lib/supabase/client.ts` are the only modules that import the Supabase SDK.
 `lib/prompts.ts` is the only module that builds prompt text.
+`lib/generator.ts` is the port every caller uses for generation, and `lib/gemini.ts` is the only module that knows how Gemini's request and response look.
+
+Provider, model and base URL resolve from configuration rather than from a compile-time import, so the provider is a value the system can report and change without touching the route.
+An unknown provider fails with an `invariant` naming it, because a wrong deployment variable has no recovery path at request time.
+Generation failures come back as a closed set of four kinds, and the route maps each kind to one status code, so the adapter never chooses an HTTP status.
 
 Replacing the model provider, or leaving Supabase, touches a small number of files.
 This is hexagonal architecture applied only where a real alternative exists, not applied uniformly for symmetry.
+
+The provider was already replaced once in practice: the build began against OpenAI and moved to Gemini.
+Section 5 of the proposal still shows OpenAI in its diagrams, and this port is what makes that a stale drawing rather than a stale design.
 
 ### 3.8 Contract-first components
 
