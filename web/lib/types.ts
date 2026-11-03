@@ -88,6 +88,12 @@ export type GenerationRequest = {
   keywords: string[];
 };
 
+export type GenerationFailure =
+  | { kind: "timeout" }
+  | { kind: "unreachable"; detail: string }
+  | { kind: "upstream"; status: number }
+  | { kind: "unusable"; detail: string };
+
 export type Ok<T> = { ok: true; value: T };
 export type Err<E> = { ok: false; error: E };
 export type Result<T, E = string> = Ok<T> | Err<E>;

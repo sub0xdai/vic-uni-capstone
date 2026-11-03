@@ -1,23 +1,35 @@
 import { NextResponse } from "next/server";
-import { MissingEnvError, optionalEnv } from "@/lib/env";
+import { InvariantError } from "@/lib/assert";
+import { MissingEnvError } from "@/lib/env";
 import { evaluateDraft } from "@/lib/evaluate";
 import {
-  GEMINI_DEFAULT_MODEL,
-  GEMINI_TEMPERATURE,
-  extractGeminiText,
-  geminiBody,
-  geminiUrl,
-} from "@/lib/gemini";
+  GENERATION_TEMPERATURE,
+  generatorFromEnv,
+  type ContentGenerator,
+} from "@/lib/generator";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 import { parseBusinessProfile, parseDraft } from "@/lib/rows";
 import { parseIdempotencyKey } from "@/lib/idempotency";
 import { supabaseServer } from "@/lib/supabase/server";
-import { MONTHLY_LIMIT, parseGenerationRequest } from "@/lib/types";
+import {
+  MONTHLY_LIMIT,
+  parseGenerationRequest,
+  type GenerationFailure,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const AI_FAILED = "The AI service could not generate content. Please try again.";
+const AI_NO_RESPONSE = "The AI service did not respond. Please try again.";
+const AI_NOT_SET_UP = "The AI service is not set up yet.";
 const UNIQUE_VIOLATION = "23505";
+
+const FAILURES: Record<GenerationFailure["kind"], { status: number; message: string }> = {
+  timeout: { status: 504, message: AI_NO_RESPONSE },
+  unreachable: { status: 504, message: AI_NO_RESPONSE },
+  upstream: { status: 502, message: AI_FAILED },
+  unusable: { status: 502, message: AI_FAILED },
+};
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -114,35 +126,38 @@ export async function POST(request: Request) {
     return fail(userPrompt.error, 400);
   }
 
-  const apiKey = optionalEnv("GEMINI_API_KEY");
-  if (apiKey === null) {
-    console.error("GEMINI_API_KEY is not set");
-    return fail("The AI service is not set up yet.", 500);
-  }
-  const model = optionalEnv("GEMINI_MODEL") ?? GEMINI_DEFAULT_MODEL;
-
-  let text: string;
+  let generator: ContentGenerator;
   try {
-    const response = await fetch(geminiUrl(model), {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(geminiBody(system.value, userPrompt.value, GEMINI_TEMPERATURE)),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      console.error(`Gemini request failed with status ${response.status}`);
-      return fail(AI_FAILED, 502);
-    }
-    const extracted = extractGeminiText(await response.json());
-    if (!extracted.ok) {
-      console.error(`Gemini response was not usable: ${extracted.error}`);
-      return fail(AI_FAILED, 502);
-    }
-    text = extracted.value;
+    generator = generatorFromEnv();
   } catch (error) {
-    console.error("Gemini request error:", error instanceof Error ? error.name : "unknown");
-    return fail("The AI service did not respond. Please try again.", 504);
+    if (error instanceof MissingEnvError) {
+      console.error(`The AI service is not configured: ${error.variable} is not set`);
+      return fail(AI_NOT_SET_UP, 500);
+    }
+    if (error instanceof InvariantError) {
+      console.error(`The AI service is misconfigured: ${error.detail}`);
+      return fail(AI_NOT_SET_UP, 500);
+    }
+    throw error;
   }
+
+  const generated = await generator.generate({
+    systemPrompt: system.value,
+    userPrompt: userPrompt.value,
+    temperature: GENERATION_TEMPERATURE,
+  });
+  if (!generated.ok) {
+    const failure = generated.error;
+    const route = FAILURES[failure.kind];
+    console.error(
+      `Generation failed via ${generator.provider} ${generator.model}: ${failure.kind}`,
+    );
+    if (failure.kind === "upstream") {
+      console.error(`Upstream answered with status ${failure.status}`);
+    }
+    return fail(route.message, route.status);
+  }
+  const text = generated.value;
 
   const evaluation = evaluateDraft({
     contentText: text,
@@ -163,8 +178,8 @@ export async function POST(request: Request) {
       topic: input.topic,
       keywords: input.keywords,
       content_text: text,
-      model,
-      temperature: GEMINI_TEMPERATURE,
+      model: generator.model,
+      temperature: GENERATION_TEMPERATURE,
       system_prompt: system.value,
       user_prompt: userPrompt.value,
       analysis: evaluation.ok ? evaluation.value : null,
