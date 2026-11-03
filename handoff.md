@@ -11,7 +11,7 @@
 The project is a Next.js 16 app on Supabase that writes marketing copy for small businesses, plus a proposal and design document set for NIT3003/NIT3004.
 This session turned the instructor's five architectural recommendations into one written answer and four cards, built and merged two of them, and closed the last unverified claim in the report.
 The database tenancy rules were tested on the real project and held, and a draft was generated and rated through the browser.
-One card is open: token usage and cost, which needs a database migration before it can be merged safely.
+All four cards were built; three are merged, and the last one (token usage and cost) needs a database migration run before the app may generate again.
 
 ---
 
@@ -19,7 +19,7 @@ One card is open: token usage and cost, which needs a database migration before 
 
 | What | Status |
 |------|--------|
-| `master` at `06bf0eb`, 76 tests, typecheck and lint clean | ✅ Done |
+| `master` at `7de2d90`, 86 tests, typecheck and lint clean | ✅ Done |
 | Instructor feedback answered, F1 to F4 carded | ✅ Done (`3623eac`) |
 | PII and secret scan before every commit | ✅ Done (`b19d9c4`) |
 | F1, rating recomputes the stored quality score | ✅ Done (`e1d5d31`) |
@@ -27,7 +27,7 @@ One card is open: token usage and cost, which needs a database migration before 
 | W3.4 closed, PR #72 rejected with reasons | ✅ Done (`6f21b6c`) |
 | Tenancy verified on the live project | ✅ Done (`41a4657`) |
 | Generation and rating exercised in the browser | ✅ Done (`06bf0eb`) |
-| F3, token usage and cost | 🔄 PR #81 open, blocked on a migration |
+| F3, token usage and cost | ✅ Merged (`7de2d90`), but the migration has not run |
 | F4, prompt templates as data | ⬜ Not started, depends on G3 |
 | G3, evaluation experiment | 🔴 Blocked, needs human raters and real drafts |
 | Deployment and a public URL | 🔴 Blocked on owner credentials |
@@ -59,8 +59,7 @@ One card is open: token usage and cost, which needs a database migration before 
 | Migration | `web/supabase/2026-11-03-usage-and-rates.sql` | Must run before F3 merges |
 | Score model | `web/lib/evaluate.ts`, `web/lib/score.ts` | Five metrics, weights, threshold, `applyRating` |
 | Usage and cost | `web/lib/usage.ts` | `monthlySpend`, `costOf`, `rateFor` |
-| Open PR | https://github.com/sub0xdai/vic-uni-capstone/pull/81 | F3, token usage and cost |
-| Working tree | clean, on branch `F3-token-usage` | `master` is untouched by the open PR |
+| Working tree | clean, on `master`; no open pull requests |
 
 ---
 
@@ -76,13 +75,14 @@ Also consider:
 
 - **Read first**: `docs/design/response-to-feedback.md`, then `docs/plan/build-plan.md` for the F and G cards, then `web/lib/generator.ts` and `web/lib/evaluate.ts`.
 - **Tests to run**: `cd web && pnpm check`, and `bash .githooks/pre-commit` after staging source files.
-- **Git state**: clean. On `F3-token-usage`; `master` has no unmerged work from this session other than PR #81.
+- **Git state**: clean, on `master` at `7de2d90`, no open pull requests.
+- **History note**: the F3 card and the handoff landed in one squash (`7de2d90`) by mistake, because the branch was cut from F3 rather than from `master`. The tree is correct and tested; only the commit's scope is wrong. Do not read it as one change.
 
 ---
 
 ## Open Questions / Blockers
 
-- **Run the F3 migration before merging #81.** Until `generated_content.usage` exists, every generation fails to save. The SQL is in `web/supabase/2026-11-03-usage-and-rates.sql`.
+- **Run the F3 migration before generating anything.** `master` now writes `generated_content.usage` on every draft, and until the column exists every generation fails to save. The SQL is in `web/supabase/2026-11-03-usage-and-rates.sql`.
 - **The seeded rate is a guess.** 0.10 and 0.40 per million tokens are placeholders for a model whose name is also a placeholder. Replace before quoting a cost.
 - **`SUPABASE_SERVICE_ROLE_KEY` is empty** in `web/.env.local`, which silently breaks anything administrative. Either fill it or remove it from `.env.local.example`.
 - **Two test accounts remain** in the live project from the tenancy check, with a profile each and one draft. Deleting them needs the service role key or the dashboard.
