@@ -88,8 +88,12 @@ Rewriting in place is `scrub.py --fix`, which a human runs and reviews.
 The schema is `web/supabase/schema.sql`.
 Paste the whole file into the Supabase SQL editor and run it.
 
-It creates two tables, enables row level security, adds the policies that keep one tenant from reading another tenant's rows, and grants the roles Supabase expects.
+It creates three tables, enables row level security on all of them, adds the policies that keep one tenant from reading another tenant's rows, and grants the roles Supabase expects.
 Without the grants a fresh project answers `permission denied` on the first query.
+
+Grants are named table by table, and there are no `alter default privileges` rules.
+A new table therefore starts with no client access at all, and has to state its own grant next to its own policies.
+The previous blanket `grant all on all tables ... to authenticated` covered `model_rate` too, so any signed-in user could rewrite prices until row level security happened to be switched on by hand.
 
 A project exists with this schema applied, including the `idempotency_key` column and its unique index.
 The credentials are in `web/.env.local`, which is not committed.
@@ -110,9 +114,14 @@ The seeded rate for `gemini-3.5-flash-lite` is a placeholder: replace it with th
 update model_rate set input_per_million = 0.10, output_per_million = 0.40 where model = 'gemini-3.5-flash-lite';
 ```
 
+`model_rate` is the one table every signed-in user reads and nobody writes, so its policy is the opposite of the tenant tables: a `for select to anon, authenticated using (true)` policy, and no write grant.
+Row level security is enabled there and was, on the live project, enabled without a policy - which reads as an empty result rather than an error.
+The dashboard turned that into a silently missing spend figure.
+`web/supabase/2026-11-04-model-rate-policy.sql` adds the policy to a project that already has the table.
+
 ### The isolation check
 
-The tenancy rule has not been verified on that project yet.
+The tenancy rule was verified against the live project, and the run is in `docs/plan/tenancy-check.md`.
 The check is two accounts, a profile each, then a read as the first user that expects exactly one row.
 
 Do not judge it from the app.

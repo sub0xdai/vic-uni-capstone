@@ -43,3 +43,13 @@ test("tenancy is enforced on insert", () => {
   const guards = SQL.match(/with check \(auth\.uid\(\) = user_id\)/g) ?? [];
   assert.ok(guards.length >= 4, `expected insert and update guards, found ${guards.length}`);
 });
+
+test("model_rate is readable by clients and writable by nobody", () => {
+  assert.match(SQL, /alter table model_rate enable row level security/);
+  assert.match(
+    SQL,
+    /create policy model_rate_select on model_rate\s+for select to anon, authenticated\s+using/,
+  );
+  assert.match(SQL, /grant select on model_rate to anon, authenticated/);
+  assert.doesNotMatch(SQL, /grant all on all tables|alter default privileges/);
+});

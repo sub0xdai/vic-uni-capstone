@@ -59,6 +59,7 @@ on conflict (model) do nothing;
 
 alter table business_profile enable row level security;
 alter table generated_content enable row level security;
+alter table model_rate enable row level security;
 
 create policy business_profile_select on business_profile
   for select using (auth.uid() = user_id);
@@ -78,6 +79,9 @@ create policy generated_content_update on generated_content
 create policy generated_content_delete on generated_content
   for delete using (auth.uid() = user_id);
 
+create policy model_rate_select on model_rate
+  for select to anon, authenticated using (true);
+
 create or replace function touch_updated_at() returns trigger
 language plpgsql as $$
 begin
@@ -91,11 +95,9 @@ create trigger business_profile_touch
   for each row execute function touch_updated_at();
 
 grant usage on schema public to anon, authenticated;
-grant all on all tables in schema public to authenticated;
-grant select on all tables in schema public to anon;
-alter default privileges in schema public
-  grant all on tables to authenticated;
-alter default privileges in schema public
-  grant select on tables to anon;
-alter default privileges in schema public
-  grant all on sequences to authenticated;
+
+grant select on business_profile, generated_content to anon;
+
+grant select, insert, update, delete on business_profile to authenticated;
+grant select, insert, update, delete on generated_content to authenticated;
+grant select on model_rate to anon, authenticated;
