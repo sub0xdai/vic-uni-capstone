@@ -17,6 +17,7 @@ export type DraftListProps = {
   onDelete: (id: string) => void;
   onRate?: (id: string, rating: number) => void;
   onStatus?: (id: string, status: DraftStatus) => void;
+  onReuse?: (draft: Draft) => void;
 };
 
 const ROW = "border-b border-[#e2eaf5] py-4 last:border-0";
@@ -62,6 +63,7 @@ export function DraftList({
   onDelete,
   onRate,
   onStatus,
+  onReuse,
 }: DraftListProps) {
   return (
     <div>
@@ -154,6 +156,18 @@ export function DraftList({
                         Discard
                       </button>
                     </>
+                  )}
+
+                  {onReuse === undefined ? null : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onReuse(draft);
+                      }}
+                      className={DISCARD}
+                    >
+                      Reuse
+                    </button>
                   )}
 
                   <button

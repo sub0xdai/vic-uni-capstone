@@ -191,6 +191,7 @@ export default function PreviewPage() {
             onDelete={() => {}}
             onRate={() => {}}
             onStatus={() => {}}
+            onReuse={() => {}}
           />
         </Card>
       </div>

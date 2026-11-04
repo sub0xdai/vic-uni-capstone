@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
 import { Card } from "@/components/ui";
 import { applyRating, rescoreText } from "@/lib/evaluate";
 import { parseBusinessProfile } from "@/lib/rows";
+import { requestFromSearch } from "@/lib/reuse";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import { isContentType, type BusinessProfile, type Draft } from "@/lib/types";
 
 type Note = { kind: "error" | "info"; text: string };
+
+const EMPTY_REQUEST: GeneratorPanelProps["value"] = {
+  contentType: "social_caption",
+  topic: "",
+  keywords: [],
+};
 
 type ProfileResult = { profile: BusinessProfile | null; error: string | null };
 
@@ -72,11 +80,18 @@ async function loadProfile(): Promise<ProfileResult> {
 }
 
 export default function GeneratePage() {
-  const [value, setValue] = useState<GeneratorPanelProps["value"]>({
-    contentType: "social_caption",
-    topic: "",
-    keywords: [],
-  });
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-slate-500">Loading...</p>}>
+      <GenerateScreen />
+    </Suspense>
+  );
+}
+
+function GenerateScreen() {
+  const params = useSearchParams();
+  const [value, setValue] = useState<GeneratorPanelProps["value"]>(
+    () => requestFromSearch(params.toString()) ?? EMPTY_REQUEST,
+  );
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);

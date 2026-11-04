@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DraftList } from "@/components/draft-list";
 import { QualityCard } from "@/components/quality-card";
 import { Card, Stars } from "@/components/ui";
 import { parseDraft, parseModelRate } from "@/lib/rows";
 import { applyRating } from "@/lib/evaluate";
 import { monthlySpend } from "@/lib/usage";
+import { reuseHref } from "@/lib/reuse";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import {
   CONTENT_TYPE_LABELS,
@@ -79,6 +81,7 @@ function Tile({
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [rates, setRates] = useState<ModelRate[]>([]);
@@ -231,6 +234,10 @@ export default function DashboardPage() {
     );
   }
 
+  function reuse(draft: Draft) {
+    router.push(reuseHref(draft));
+  }
+
   if (loading) {
     return <p className="p-6 text-sm text-slate-500">Loading...</p>;
   }
@@ -352,6 +359,7 @@ export default function DashboardPage() {
           onDelete={remove}
           onRate={rate}
           onStatus={changeStatus}
+          onReuse={reuse}
         />
       </Card>
 
