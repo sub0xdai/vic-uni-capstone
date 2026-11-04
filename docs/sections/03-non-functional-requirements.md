@@ -72,3 +72,27 @@ generation task with fewer than 5 clicks after logging in. The design
 must be responsive, fully functional on both desktop (1920x1080) and
 tablet devices, catering to business owners managing operations on the
 go (Liando et al., 2025).
+
+### 3.6 Non-functional requirements register
+
+A non-functional requirement that cannot be measured is a wish, and the review on 15 March 2026 recorded the missing measurement column as a gap.
+Every requirement above now has an identifier, a target, a way to measure it, and an honest status.
+
+"Inherited" means the capability comes from the hosting platform rather than from this code, so it is only as good as that platform, and this project has not measured it either way.
+
+| ID | Requirement | Target | How it would be measured | Status | Justification |
+|---|---|---|---|---|---|
+| NFR-01 | Tenant isolation | No user reads another user's row | A query with one user's token and no filter returns only that user's rows, and a cross-tenant write is refused | Measured, `docs/plan/tenancy-check.md` | Isolation is the security boundary of a multi-tenant SaaS product |
+| NFR-02 | Availability | 99.9 percent during business hours | An uptime monitor with an alert, or the platform's own reported availability | Unmeasured, inherited from the host | Small businesses publish on a schedule, so an outage costs them a day |
+| NFR-03 | Graceful AI failure | A plain message within 1 second, input preserved | Remove the API key, press Generate, time the message, check the form still holds the topic and keywords | Behaviour implemented, timing unmeasured | Losing typed input on a failed call is the failure users remember |
+| NFR-04 | Interface latency | Dashboard and editor under 2 seconds | Browser network panel on a throttled connection, five runs, report the median | Unmeasured | Owners use this between other jobs, on a laptop or a tablet |
+| NFR-05 | Generation latency | Caption under 15 seconds, outline under 45 | Time the request end to end for each content type, ten runs per type, report the median and the worst | Unmeasured, the route stores tokens but not duration | The wait is the cost of the feature, so it has to be stated |
+| NFR-06 | Transport security | TLS 1.3 | Inspect the certificate and the negotiated protocol on the deployed URL | Unmeasured, inherited | Business profiles and drafts are commercial information |
+| NFR-07 | Credential storage | Salted hash, never plaintext | Inspect the auth table; this code never handles a password | Inherited from Supabase Auth | A leaked password list is unrecoverable for the owner |
+| NFR-08 | No training on user data | The provider does not train on this traffic | Read the provider's terms for the paid tier and record the answer with the date | Unmeasured, a terms question rather than a code question | Owners will paste material they do not want in a public model |
+| NFR-09 | Few clicks to generate | Under 5 after login | Count the interactions from the dashboard to a generated draft | Counted: open Generate, choose a type, type a topic, press Generate | The audience is explicitly non-technical |
+| NFR-10 | Responsive layout | Desktop 1920x1080 and tablet | Resize each screen to both sizes and record screenshots | Unmeasured | Business owners manage operations away from a desk |
+
+Seven of the ten rows say unmeasured or inherited, and that is the honest position rather than a gap in the writing.
+Two of them, NFR-04 and NFR-05, are cheap to measure and are the first thing to do once the app is deployed.
+The load test card, `G4`, covers NFR-02 and the concurrency part of section 3.1.

@@ -8,17 +8,13 @@ Entries get added when something finishes, even if that is late.
 
 ## Where things stand, 4 November 2026
 
-- `master` is at `83cc64b`, and this entry rides on top of it.
-- The checks pass: 87 tests, typecheck and lint clean.
-- The database has now been audited against the Supabase row level security guide rather than against our own README.
-  The two tenant tables hold, checked again on the live project with one fresh account of mine and a user id that was not mine.
-- `model_rate` was the defect: row level security on, no policy, so every client read answered `[]` and the dashboard printed "No rate on record for this model" instead of a cost.
-  That means F3 is merged but its cost figure was dead on the live project.
-- The fix is `02e7872`: a select-only policy, no write grant, and grants named table by table with no default privileges.
-  It needs one paste in the Supabase SQL editor before it takes effect, and that paste has not happened.
-- I read every piece of feedback we hold against the code. Of the audit's eight findings, one is fixed, two are half done and five have not moved.
-  The proposal gaps (G5) are the largest and they are pure writing.
-- Still true: nothing deployed, nothing load tested, no raters for the evaluation experiment.
+- `master` is at `24305f6`, and this entry rides on top of it. 123 web tests, 8 Go checks, typecheck and lint clean, every page still prerenders.
+- The seven-card plan in `docs/plan/p0-p1-plan.md` is finished: rescore on save, the status filter with the Ready rename, reuse of a draft's inputs, the format budget while typing, the draft detail page with the prompt panel, the format preview, and the reason behind each failed check.
+- Four gaps between the proposal and the build are closed or recorded: industry is a dropdown, the quality score has no column of its own and the reason is written down, one generation per user at a time is a lock in the database, and section 2 describes the six tables that exist.
+- `G5` is written: `FR-01` to `FR-25` with a MoSCoW table in section 2, an NFR register with a measurement column in section 3, twelve exception flows in section 4, a risk register with owners in section 9, and the missing dependency list in section 10.
+- `G3` is designed and the tool exists (`tools/evaluation`). What is left is the export and ratings from people outside the build.
+- The prompt template path is proven on the live project for the fallback only: a caption generated after the migration stored `prompt_version = builtin:1`. A stored template has never been active.
+- Not done: nothing deployed, nothing load tested, the generation-lock migration not pasted (without it every generation now fails), and no raters for the experiment.
 
 ## Where things stand, 3 November 2026
 
@@ -41,6 +37,53 @@ Entries get added when something finishes, even if that is late.
 - Both READMEs and the working agreements now describe the build that exists.
 - Not done: the grants query has to be run by whoever holds the Supabase project.
   Nothing has been exercised end to end against a live database, deployed, or load tested.
+
+## 4 November 2026 - seven cards, then the requirements read line by line
+
+**What I meant to do.** Nothing more than answer a question.
+The instructor asked where the prompt for the LLM was, which was a polite way of saying it was hardcoded.
+I went to point at a file and found that the file was the whole answer: prompts in TypeScript, no version on a draft, no way to change a template without a deploy.
+
+**What actually happened.** It turned into a day, in four stages.
+
+First, prompt templates as data (`aeb86a0`, `520c674`).
+A `prompt_template` table, one active body per content type, a lint that refuses a body which stops naming a structure the scorer checks, and `prompt_version` stamped on every draft.
+The owner ran the migration and generated a caption, which stored `builtin:1`. That is the fallback path proven, not the stored one.
+
+Second, a study of Postiz for product patterns, then a plan (`0cce96f`).
+Seven cards, four to polish what exists and three to add, none of which needs a schema change or a new API route.
+The plan says to stop after the fourth and use the app. I did not, because every message said go.
+
+Third, the seven cards themselves (`d76ff5e` to `35d716e`).
+The one that mattered most is `P0.1`: saving an edit used to leave a quality report describing text that no longer existed, which is the kind of bug that makes every later number a lie.
+The one with the most teaching value is `P1.1`: a draft could not be reopened at all, and now `/draft/[id]` shows the text, the score, the reasons and the exact prompt that produced it.
+
+Fourth, and this is where the real scope work was, I read sections 2 and 3 line by line against the code.
+Found four disagreements, fixed three and recorded the fourth.
+Industry was free text where the proposal says dropdown, and is now a closed list with a guard.
+The proposal's `Quality_Score` column does not exist, and now the reason is written down rather than assumed: the score lives inside `analysis` so it cannot contradict its own metrics.
+One generation per user at a time was only a browser guard, and is now a row in `generation_lock` with a ninety second stale rule.
+Then `G5` itself: `FR-01` to `FR-25`, a MoSCoW table, an NFR register with a measurement column, twelve exception flows, a risk register with owners, and the dependency list the Gantt charts never had.
+
+**How I know.**
+- 123 web tests and 8 Go checks, typecheck and lint clean, `/api/generate` still built and every page still prerendered.
+- `/preview` served 200 with the chips, the over-limit counter, the three format previews, the prompt panel and the reasons, checked by curling the rendered HTML each time rather than by trusting the diff.
+- The lock's SQL ran on a local Postgres: a two minute old row is cleared by the ninety second rule, an acquire holds one row, a second acquire is a duplicate key, an update is refused, and writing another user's row is refused by the policy.
+- The remote ref was checked with `git ls-remote` after every push, because the ssh agent on this machine drops out and `git push` fails in a way that looks like a permissions problem.
+
+**Decisions to remember.**
+- **Derive, do not store.** The reasons a check failed are computed from the stored text, so a draft written before the card existed gains them with no migration, and the reasons cannot drift from the score.
+- **The score lives with its metrics.** A separate column would be a second record of one fact, and nothing in the database keeps two records agreeing.
+- **The lock is in the database.** An in-memory guard would be a lie the moment there is a second instance, and the scaling requirement says there will be.
+- **Lint at request time.** A template inserted through the SQL editor never passes `pnpm check`, so the route has to check it too, otherwise the tests only protect the people who edit code.
+- **Ready, not Published.** The app marks content for use and distributes nothing. The stored enum keeps the word; the interface no longer promises it.
+- **The experiment is written before the result.** `docs/design/evaluation.md` fixes the decision rules in advance, so a result cannot be read into the rubric afterwards.
+
+**What went wrong, since that is the useful part.**
+- Two edits of mine mangled text: a heading order in section 4 and a paragraph deleted from section 10. Both caught by reading the diff back immediately, not by any tool.
+- Two test expectations were wrong, not the code: a caption fixture that was 279 characters when I wanted 300, and a pass count I guessed instead of computing. Both times the test was the thing that was wrong, which is worth remembering before changing code to satisfy a test.
+- The two migrations are named `2026-11-05` and were written on 4 November. Cosmetic, but it will read oddly in a report, so: they are a day ahead.
+- I skipped the plan's own stop-and-use-the-app gate. Everything above is verified by tests, builds and rendered HTML, and none of it by a person clicking for twenty minutes in a real session. That is the debt this entry leaves.
 
 ## 4 November 2026 - the database audited against the guide, not the README
 

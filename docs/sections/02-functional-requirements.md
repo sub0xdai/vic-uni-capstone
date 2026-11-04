@@ -347,3 +347,18 @@ The third and fourth columns are where the requirement is implemented and where 
 Two things this table makes visible.
 First, several requirements are checked by a browser walk rather than by a test, because they are screen behaviour, and the walk has not been recorded for each of them yet.
 Second, the identifiers are new: the proposal was marked without them, and the review on 15 March 2026 recorded their absence as a traceability gap.
+
+### 2.11 MoSCoW prioritisation
+
+Every requirement above carries one priority, so a smaller build is still a defensible build.
+The priority says what the system must do to be the product described here, not what is nice to look at.
+
+| Priority | Requirements | Why this priority |
+|---|---|---|
+| Must | FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-09, FR-10, FR-11, FR-13, FR-15, FR-16, FR-20, FR-22, FR-23, FR-24, FR-25 | Without these there is no product: nobody can sign in, describe a business, generate a draft, have it scored, keep it, or be kept out of somebody else's data |
+| Should | FR-12, FR-14, FR-17, FR-18, FR-19, FR-21 | The draft has to be seen, copied, found again and rated for the product to be usable, but the system still generates without them |
+| Could | The status lifecycle (draft, ready, discarded), the format preview, and the reason for each failed check | They make the same requirements easier to act on. None of them adds a capability |
+| Won't, this unit | Publishing to platforms, scheduling, team collaboration, a prompt effectiveness chooser, and per-post analytics | Each needs an external integration, other people, or a sample large enough to support a claim. Adding them would trade depth for surface, which is the criticism the design unit already answered |
+
+The "won't" row is the important one.
+It is the list a marker should hold this build to, and every item on it has a reason rather than an omission.

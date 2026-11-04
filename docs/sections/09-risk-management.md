@@ -19,8 +19,8 @@ depends on automated content generation, maintaining output quality is
 essential for trust and usability.
 
 API dependency and service availability are additional risks. The system
-relies on external AI services, such as the OpenAI API, to generate
-content. If these services are unavailable, experience latency, or reach
+relies on an external AI service, in this build the Google Gemini API, to generate
+content. If the service is unavailable, experiences latency, or reaches
 usage limits, the platform may be unable to generate new content for
 users.
 
@@ -54,11 +54,10 @@ through a star-based feedback system. Together, these mechanisms create
 a feedback loop that improves prompt design and maintains high output
 quality over time.
 
-To mitigate the risk of external API failures, the backend server uses
-fault tolerance and retry logic. If the AI API fails or times out, the
-system automatically retries with exponential backoff. If the request
-continues to fail, the system displays a user-friendly error message and
-preserves the user’s input data to prevent loss of work.
+To mitigate the risk of external API failures, the generate route classifies every failure into one of four kinds, `timeout`, `unreachable`, `upstream` or `unusable`, and maps each kind to one status code and one plain sentence.
+The form keeps what the owner typed.
+There is no retry and no exponential backoff: a retry multiplies a billable call and hides the fault, so the build reports the failure instead and lets the owner decide.
+This paragraph previously claimed retry logic that does not exist.
 
 To manage data security and privacy risks, the system follows
 industry-standard security practices. All client-server communication is
@@ -83,3 +82,26 @@ redistribution if needed.
 Through these mitigation strategies, the project aims to ensure the
 AI-powered platform remains secure and reliable, consistently delivering
 value to small business users.
+
+### 9.3 Risk register
+
+The prose above describes the categories.
+This register is the version that can be held to account: one row per risk, with who owns it and whether it is actually controlled.
+
+Status means the current state of the mitigation, not the intention: **controlled** means there is a mechanism and it has been exercised, **partial** means the mechanism exists but has not been exercised, **open** means there is no mechanism yet.
+
+| ID | Risk | Likelihood | Impact | Owner | Mitigation | Status |
+|---|---|---|---|---|---|---|
+| R-01 | Generated content is poor, off-brief or invents facts | High | High | Daniel | A local scorer on five metrics, the owner's rating, and the evaluation experiment that tests whether the score tracks human judgement | Partial: the scorer is live, the experiment has no sample yet |
+| R-02 | The AI provider fails, throttles or times out | Medium | High | Daniel | Four failure kinds mapped to plain messages, a thirty second timeout, the input preserved, and no silent retry | Controlled |
+| R-03 | One tenant reads another tenant's data | Low | High | Daniel | Row level security on every tenant table, no default grants, and a two-account isolation check run against the live project | Controlled, and re-run after any schema change |
+| R-04 | A secret or personal data reaches the repository | Medium | High | Daniel | `.env.local` is ignored, and a pre-commit scan refuses a staged file containing a key, an email, a phone number or a card number | Controlled |
+| R-05 | The free Supabase project pauses before the demonstration | High | Medium | Daniel | Wake the project in the week before, and keep the dashboard activity visible | Open |
+| R-06 | Only one person can carry the build | High | High | Daniel | Cards are sized to be delegated, `/preview` is the review surface, and the plan names which cards suit which person | Accepted, managed by scope reduction rather than by staffing |
+| R-07 | The evaluation experiment is never finished, leaving the rubric unvalidated | High | High | Daniel | The experiment is designed and the tool exists, so what is left is one export and a few ratings | Open, and the largest assessment risk |
+| R-08 | Nothing is deployed, so there is no public URL and no load test | High | High | All | A Vercel project and a domain, which need owner credentials | Open |
+| R-09 | A stored prompt body is edited into something the scorer cannot use | Low | Medium | Daniel | The route lints a stored body at request time, logs the problem, and falls back to the built-in body | Controlled |
+| R-10 | A reader treats the quality score as a guarantee of quality | Medium | Medium | Daniel | The interface shows the reason for each failed check, and the report states that the metric is a heuristic with an unmeasured correlation to human judgement | Partial |
+
+Two rows carry the honest weight of this build: R-07 and R-08.
+An unvalidated rubric and an undeployed application are the two findings a marker can reach without reading any code.
