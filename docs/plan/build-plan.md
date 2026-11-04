@@ -97,14 +97,16 @@ Five recommendations came back from the instructor on 3 November.
 Four of them are cards here. The fifth is `G3` in the table above, restated with acceptance lines, and it now depends on `F1`.
 
 All four touch `supabase/schema.sql`, `web/lib/*` or a route handler, so they stay with Daniel and are not handed out.
-Order is dependency order, not interest order: `F3` needs the port to know which model's price to read, and `F4` needs a metric before a template version can be compared against anything.
+Order is dependency order, not interest order: `F3` needs the port to know which model's price to read.
+`F4` was carded behind `G3` and landed before it.
+The metric was the gate because a template version cannot be compared against anything until there is one.
+It no longer is, because a stored template is now linted at request time against the structures `evaluate.ts` scores, so a bad template is refused and falls back to the built-in one whether or not an experiment is running.
 
 | ID | Card | Owner | File or area | Done when | Depends on |
 |---|---|---|---|---|---|
 | F1 | Satisfaction recompute on rating | Daniel | `web/lib/evaluate.ts`, the rating write paths | Rating a draft 5 of 5 stores an overall score that includes satisfaction 1.0, `assertQualityReport` passes on the stored row, and a test covers a draft unrated then rated | none |
 | F2 | Provider port | Daniel | `web/lib/generator.ts`, `web/lib/gemini.ts`, `app/api/generate/route.ts`, `docs/design/architecture.md` | The route imports the port and never the provider; provider, model and base URL resolve from config; an unknown provider fails at startup naming itself; the existing Gemini tests pass against the adapter unchanged | none |
 | F3 | Token usage and cost | Daniel | `supabase/schema.sql`, `app/api/generate/route.ts`, `app/dashboard/page.tsx` | Every draft stores the response `usageMetadata`; the dashboard shows month to date tokens and cost for the signed in user, read from a rate row keyed by model rather than a constant; the numbers are checked against one real response | F2 |
-| F4 | Prompt templates as data | Daniel | `supabase/schema.sql`, `web/lib/prompts.ts`, `web/lib/prompts.test.ts` | The active template resolves from the table with a fallback to the seeded constants; each draft stamps `prompt_version`; a test fails when an active template stops mentioning the structure its content type is scored on | G3 |
 
 Declined, with the reasons recorded in the response document: a prompt editing dashboard, a cache layer, shortening prompts for cost, and an agent layer for personalisation.
 
@@ -153,6 +155,7 @@ Two of them also drifted: `W2.4` and `W3.4` name routes the build does not have,
 | D26 | Rating persistence | `W3.4`, done on its behaviour: a rating has survived a reload since the editor and the dashboard landed. PR 72 closed, because the route it named would have been a third write path for one column |
 | D27 | Tenancy verified on the live project | `W1.2` met. Two accounts, a profile each, unfiltered reads returning one row, none without a token, a cross-tenant insert refused with 403, a cross-tenant update affecting nothing, and a draft invisible to the other account. `docs/plan/tenancy-check.md` records the checks and what they do not cover |
 | D28 | Application path exercised on the live project | One blog outline generated, saved and rated through the browser. The rating moved the overall score, which the stored report only does through `applyRating`, so the route, the provider port, the write and the recompute all ran against the real database |
+| D29 | Prompt templates as data | `F4` met on its behaviour. `prompt_template` holds one body per content type with a version, a partial unique index allowing one active row each, and read-only client access. The route resolves the highest active version, stamps `prompt_version` on the draft as `builtin:1` or `template:<n>`, and refuses a stored body that stops naming a structure the scorer checks. Nine tests cover resolution, the lint and the schema. Migration `supabase/2026-11-05-prompt-template.sql` |
 
 ---
 

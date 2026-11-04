@@ -30,6 +30,7 @@ create table generated_content (
   temperature numeric not null,
   system_prompt text not null,
   user_prompt text not null,
+  prompt_version text,
   idempotency_key text,
   created_at timestamptz not null default now(),
   constraint generated_content_rating_range check (rating is null or rating between 1 and 5),
@@ -57,9 +58,26 @@ insert into model_rate (model, input_per_million, output_per_million)
 values ('gemini-3.5-flash-lite', 0.10, 0.40)
 on conflict (model) do nothing;
 
+create table prompt_template (
+  id uuid primary key default gen_random_uuid(),
+  content_type content_kind not null,
+  version integer not null,
+  body text not null,
+  is_active boolean not null default false,
+  created_at timestamptz not null default now(),
+  constraint prompt_template_version_unique unique (content_type, version),
+  constraint prompt_template_version_positive check (version > 0),
+  constraint prompt_template_body_present check (length(trim(body)) > 0)
+);
+
+create unique index prompt_template_one_active_idx
+  on prompt_template (content_type)
+  where is_active;
+
 alter table business_profile enable row level security;
 alter table generated_content enable row level security;
 alter table model_rate enable row level security;
+alter table prompt_template enable row level security;
 
 create policy business_profile_select on business_profile
   for select using (auth.uid() = user_id);
@@ -82,6 +100,9 @@ create policy generated_content_delete on generated_content
 create policy model_rate_select on model_rate
   for select to anon, authenticated using (true);
 
+create policy prompt_template_select on prompt_template
+  for select to authenticated using (true);
+
 create or replace function touch_updated_at() returns trigger
 language plpgsql as $$
 begin
@@ -101,3 +122,4 @@ grant select on business_profile, generated_content to anon;
 grant select, insert, update, delete on business_profile to authenticated;
 grant select, insert, update, delete on generated_content to authenticated;
 grant select on model_rate to anon, authenticated;
+grant select on prompt_template to authenticated;

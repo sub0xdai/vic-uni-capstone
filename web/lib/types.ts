@@ -65,6 +65,7 @@ export type GenerationParameters = {
   temperature: number;
   systemPrompt: string;
   userPrompt: string;
+  promptVersion: string | null;
 };
 
 export type Draft = {

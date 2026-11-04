@@ -1,17 +1,16 @@
-# Handoff: ContentCraft capstone, RLS audited, the spend figure unblocked
+# Handoff: ContentCraft capstone, prompt templates as data
 
-**Date:** 2026-11-04
+**Date:** 2026-11-05
 **Project:** `~/1-projects/capstone` (vic-uni-capstone)
-**Next focus:** paste `2026-11-04-model-rate-policy.sql` in the Supabase SQL editor, then deploy.
+**Next focus:** paste `2026-11-04-model-rate-policy.sql` and `2026-11-05-prompt-template.sql` in the Supabase SQL editor, then deploy.
 
 ---
 
 ## Summary
 
 The project is a Next.js 16 app on Supabase that writes marketing copy for small businesses, plus a proposal and design document set for NIT3003/NIT3004.
-This session audited the live database against the Supabase row level security guide instead of against its own README, and found one table that was closed the wrong way.
-The two tenant tables hold. `model_rate` had row level security on with no policy, so every client read returned an empty list and the spend figure vanished with no error.
-That is now a select-only policy in both SQL files, with the grants named table by table so a new table cannot inherit write access by accident.
+This session answered the instructor's question about where the prompt lives by building card `F4`, prompt templates as data, and verified the new SQL against a local Postgres.
+The live project still needs the migration pasted before the next deploy, because until then the `prompt_version` write has no column to land in.
 
 ---
 
@@ -29,7 +28,7 @@ That is now a select-only policy in both SQL files, with the grants named table 
 | Generation and rating exercised in the browser | ✅ Done (`06bf0eb`) |
 | F3, token usage and cost | ✅ Merged (`7de2d90`), the `usage` column is live, but `model_rate` is still unreadable |
 | RLS audit of the live project | ✅ Done (`02e7872`), needs one paste in the SQL editor to take effect |
-| F4, prompt templates as data | ⬜ Not started, depends on G3 |
+| F4, prompt templates as data | ✅ Done, needs the migration pasted before the next deploy |
 | G3, evaluation experiment | 🔴 Blocked, needs human raters and real drafts |
 | Deployment and a public URL | 🔴 Blocked on owner credentials |
 | Load test | 🔴 Blocked on the deployment |
@@ -40,7 +39,7 @@ That is now a select-only policy in both SQL files, with the grants named table 
 
 - **The provider is configuration, not an import.** `lib/generator.ts` is the port and `lib/gemini.ts` is the only adapter. An unknown provider throws an invariant rather than returning a `Result`, because a wrong deployment variable has no recovery path at request time.
 - **Failures are a closed set of four kinds** (`timeout`, `unreachable`, `upstream`, `unusable`) and the route owns the HTTP mapping, so an adapter never picks a status code.
-- **Prompts stay in code for now.** Moving them to a table only pays once there is a metric to compare versions against, which is G3's job. Card F4 keeps the tests by linting each active template against the structures `evaluate.ts` scores.
+- **Prompt templates are data, with a lint the database cannot skip.** `prompt_template` holds one body per content type, a partial unique index allows one active row each, and clients read it without writing it. The route takes the highest active version, stamps `prompt_version` on the draft, and refuses a body that stops naming a structure `evaluate.ts` scores, logging it and using the built-in body instead. The lint runs at request time as well as in the tests, because a row inserted through the SQL editor never passes `pnpm check`. The tone descriptors stay in code: nothing scores them.
 - **Prompt shortening was declined.** Measured: 76-word system prompt and 47 to 60-word user prompt is about 190 input tokens against a 1024-token output cap, so a prompt 30% shorter saves under 5% of a call. The output cap and the 20-draft limit are what bound spend.
 - **The isolation test is a query, not a look at the app.** Every page adds `.eq("user_id", ...)`, so a working filter hides a broken policy. The test reads with a user's token and no filter.
 - **PR #72 was closed rather than merged.** It added a server route for a column that RLS already guards, creating a second write path for one field, and it would have re-frozen the satisfaction metric.

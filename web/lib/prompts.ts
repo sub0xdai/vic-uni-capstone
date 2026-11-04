@@ -17,13 +17,21 @@ export type PromptInput = {
   profile: BusinessProfile;
 };
 
+export type PromptTemplate = {
+  contentType: ContentType;
+  version: number;
+  body: string;
+};
+
+export const BUILTIN_PROMPT_VERSION = 1;
+
 const TONE_GUIDE: Record<BrandTone, string> = {
   professional: "clear, polished and confident, with no slang",
   casual: "relaxed and conversational, like talking to a neighbour",
   friendly: "warm, welcoming and upbeat",
 };
 
-const FORMAT_RULES: Record<ContentType, string> = {
+export const FORMAT_RULES: Record<ContentType, string> = {
   social_caption: [
     "Write one social media caption.",
     "Keep it under 280 characters.",
@@ -46,8 +54,62 @@ const FORMAT_RULES: Record<ContentType, string> = {
   ].join(" "),
 };
 
+export const STRUCTURE_HINTS: Record<ContentType, readonly string[]> = {
+  blog_outline: ["introduction", "heading", "conclusion"],
+  social_caption: ["280", "call to action"],
+  email_newsletter: ["Subject:", "Preview:", "Button:"],
+};
+
 function blank(value: string): boolean {
   return value.trim().length === 0;
+}
+
+export function parsePromptTemplate(value: unknown): Result<PromptTemplate> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return err("prompt_template row is not an object");
+  }
+  const source = value as Record<string, unknown>;
+  if (!(CONTENT_TYPES as readonly string[]).includes(String(source.content_type))) {
+    return err(`prompt_template row has an unknown content type: ${String(source.content_type)}`);
+  }
+  const version = source.version;
+  if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
+    return err(`prompt_template row has no usable version: ${String(version)}`);
+  }
+  const body = source.body;
+  if (typeof body !== "string" || blank(body)) {
+    return err("prompt_template row has an empty body");
+  }
+  if (source.is_active !== true) {
+    return err("prompt_template row is not active");
+  }
+  return ok({ contentType: source.content_type as ContentType, version, body: body.trim() });
+}
+
+export function resolveTemplate(
+  rows: readonly unknown[],
+  contentType: ContentType,
+): PromptTemplate | null {
+  let best: PromptTemplate | null = null;
+  for (const row of rows) {
+    const parsed = parsePromptTemplate(row);
+    if (!parsed.ok || parsed.value.contentType !== contentType) {
+      continue;
+    }
+    if (best === null || parsed.value.version > best.version) {
+      best = parsed.value;
+    }
+  }
+  return best;
+}
+
+export function templateProblems(template: PromptTemplate): string[] {
+  const body = template.body.toLowerCase();
+  return STRUCTURE_HINTS[template.contentType].filter((hint) => !body.includes(hint.toLowerCase()));
+}
+
+export function promptVersionLabel(template: PromptTemplate | null): string {
+  return template === null ? `builtin:${BUILTIN_PROMPT_VERSION}` : `template:${template.version}`;
 }
 
 export function buildSystemPrompt(profile: BusinessProfile): Result<string> {
@@ -79,7 +141,10 @@ export function buildSystemPrompt(profile: BusinessProfile): Result<string> {
   return ok(prompt);
 }
 
-export function buildUserPrompt(input: PromptInput): Result<string> {
+export function buildUserPrompt(
+  input: PromptInput,
+  template: PromptTemplate | null = null,
+): Result<string> {
   if (!(CONTENT_TYPES as readonly string[]).includes(input.contentType)) {
     return err(`unknown content type: ${String(input.contentType)}`);
   }
@@ -89,7 +154,8 @@ export function buildUserPrompt(input: PromptInput): Result<string> {
   }
 
   const keywords = input.keywords.map((item) => item.trim()).filter((item) => item.length > 0);
-  const lines = [FORMAT_RULES[input.contentType], "", `Topic: ${topic}`];
+  const rules = template === null ? FORMAT_RULES[input.contentType] : template.body;
+  const lines = [rules, "", `Topic: ${topic}`];
   if (keywords.length > 0) {
     lines.push(`Work these keywords in naturally: ${keywords.join(", ")}`);
   }

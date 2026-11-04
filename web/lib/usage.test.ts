@@ -17,7 +17,13 @@ function draft(overrides: Partial<Draft>): Draft {
     status: "draft",
     statusChangedAt: null,
     analysis: null,
-    parameters: { model: "test-model", temperature: 0.7, systemPrompt: "s", userPrompt: "u" },
+    parameters: {
+      model: "test-model",
+      temperature: 0.7,
+      systemPrompt: "s",
+      userPrompt: "u",
+      promptVersion: null,
+    },
     usage: { inputTokens: 100, outputTokens: 200 },
     createdAt: "2026-11-03T09:00:00.000Z",
     ...overrides,
@@ -56,7 +62,13 @@ test("spending counts only this month and only drafts with usage", () => {
 
 test("a model with no rate row still reports tokens, and no cost", () => {
   const unpriced: Draft = draft({
-    parameters: { model: "unpriced", temperature: 0, systemPrompt: "s", userPrompt: "u" },
+    parameters: {
+      model: "unpriced",
+      temperature: 0,
+      systemPrompt: "s",
+      userPrompt: "u",
+      promptVersion: null,
+    },
   });
   const spend = monthlySpend([unpriced], [RATE], NOW);
   assert.deepEqual(spend.tokens, { inputTokens: 100, outputTokens: 200 });

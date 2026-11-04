@@ -146,6 +146,12 @@ This is hexagonal architecture applied only where a real alternative exists, not
 The provider was already replaced once in practice: the build began against OpenAI and moved to Gemini.
 Section 5 of the proposal still shows OpenAI in its diagrams, and this port is what makes that a stale drawing rather than a stale design.
 
+Prompt text is a third boundary, and it has the same shape.
+`lib/prompts.ts` holds the built-in body for each content type and the rules for what each body has to mention.
+A stored body in `prompt_template` wins over the built-in one when it is active and passes that lint, and every draft records which one produced it as `prompt_version`.
+A template that fails the lint is logged and skipped rather than sent, so an edit in the SQL editor cannot quietly lower a structure score.
+The tone descriptors stay in code, because nothing scores them.
+
 ### 3.8 Contract-first components
 
 Every delegated component has its props type defined before its body, and its parent already passes real data.

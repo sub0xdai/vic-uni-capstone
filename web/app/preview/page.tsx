@@ -53,6 +53,7 @@ const DRAFT: Draft = {
     temperature: 0.7,
     systemPrompt: "You are a marketing content specialist for a small business.",
     userPrompt: "Write a social caption about the single origin Ethiopian launch.",
+    promptVersion: "builtin:1",
   },
   usage: { inputTokens: 190, outputTokens: 240 },
   createdAt: new Date("2026-10-02T09:00:00Z").toISOString(),

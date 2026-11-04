@@ -15,7 +15,7 @@ The evaluation experiment is the one deliverable the earlier review named as mis
 
 | # | Recommendation | Decision | Shape | Effort |
 |---|---|---|---|---|
-| 1 | Dynamic prompt management | Build, after item 5 | Seeded template table, version stamped on each draft, lint against the scorer's own checks | 1 card |
+| 1 | Dynamic prompt management | Built, card `F4` | Template table with a version per content type, version stamped on each draft, lint against the scorer's own checks | 1 card |
 | 2 | Cost engineering | Build the measurement, decline the shortening | Record `usageMetadata` per draft, show month to date tokens and cost from a rate table | 1 card |
 | 3 | API flexibility | Build | `ContentGenerator` port with one Gemini adapter, provider from config | 1 card |
 | 4 | Contextual personalisation | Decline this unit | Two profile columns would do it later; an agent layer would not | 0 |
@@ -23,7 +23,8 @@ The evaluation experiment is the one deliverable the earlier review named as mis
 
 Order: 5, then 3, then 2, then 1.
 Each step needs the evidence the one before it produces.
-Prompt versioning is unmeasurable before there is a metric, and a cost dashboard is per-provider plumbing before there is a port.
+A cost dashboard is per-provider plumbing before there is a port, and prompt versioning is unmeasurable before there is a metric.
+Item 1 landed before items 5 and 2 anyway, because the structure lint runs at request time and does not depend on the experiment.
 
 ---
 
@@ -31,30 +32,34 @@ Prompt versioning is unmeasurable before there is a metric, and a cost dashboard
 
 **Asked:** move prompts out of the source, store them where they can be versioned and tested without a code change.
 
-**Today.** `web/lib/prompts.ts` holds two tables in code: `TONE_GUIDE` for three tones and `FORMAT_RULES` for three content types.
+**Before.** `web/lib/prompts.ts` held two tables in code: `TONE_GUIDE` for three tones and `FORMAT_RULES` for three content types.
 `buildSystemPrompt` assembles a 76 word system prompt from the profile, and `buildUserPrompt` assembles 47 to 60 words by content type.
 Six tests in `web/lib/prompts.test.ts` pin that assembly, including the W2.2 acceptance criteria.
 Every draft already stores the exact `system_prompt` and `user_prompt` that produced it, in `generated_content`, alongside the model and the temperature.
 
-So the audit trail the recommendation wants already exists per draft.
-What does not exist is a way to change a template without editing a TypeScript file.
+So the audit trail the recommendation wants already existed per draft.
+What did not exist was a way to change a template without editing a TypeScript file.
 
 **Decision: build it, with the tests kept.**
 
-The naive version of this recommendation deletes the only automated check on prompt content and replaces it with a runtime read.
-That trade is bad for a team of four where three members do not build, because a prompt edit would then bypass `pnpm check` and review.
+Built as card `F4`, closed with the schema, the resolution and the lint below.
 
-The shape that keeps both:
+- A `prompt_template` table: `content_type`, `version`, `body`, `is_active`, `created_at`, with a partial unique index allowing one active row per content type.
+- `lib/prompts.ts` resolves the highest active row and falls back to the built-in table, so a fresh database and a test run behave identically and a database that lost the table still generates.
+- `generated_content.prompt_version` records `builtin:1` or `template:<n>`, so a draft is attributed to the version that produced it and not only to its text.
+- `templateProblems` holds the lint: every body has to mention the structures its content type is scored on, which is subject, preview and button for email, a call to action and the character limit for social, and an introduction, headings and a conclusion for blog.
 
-- A `prompt_template` table: `content_type`, `brand_tone` (nullable), `version`, `body`, `is_active`, `created_at`.
-- `lib/prompts.ts` resolves the active row and falls back to the seeded constants, so a fresh database and a test run behave identically.
-- `generated_content` gains `prompt_version`, so a draft can be attributed to a template version and not just to its text.
-- A test asserts every active template mentions the structures its content type is scored on: subject, preview and button for email, a call to action and the character limit for social, introduction, sections and conclusion for blog.
-
-That last test is the useful part.
+The lint runs in two places.
+`web/lib/prompts.test.ts` fails the build when a built-in body drops a structure.
+The generate route refuses a stored body that fails the same check, logs it, and uses the built-in body instead, so a template edited in the SQL editor cannot reach the model unvetted.
 `lib/evaluate.ts` already scores structure with per-type checks, so the scorer defines what a template has to ask for.
-A new template version that quietly drops the subject line fails the lint before it is activated, and would otherwise show up as a scoring regression weeks later.
+A new template version that quietly drops the subject line is refused for that request, and would otherwise have shown up as a scoring regression weeks later.
 Activation stays a SQL change, which means it passes through review.
+
+The shape differs from the plan in two places.
+There is no `brand_tone` column, because the tone descriptors are three short strings that nothing scores, and a nullable second key would have bought a dimension with no evidence behind it.
+The tone text still reaches each draft, because the whole system prompt is stored with it.
+And a stored template is selected as a whole body rather than assembled from parts, so one row per content type is the unit of versioning.
 
 **Declined within item 1:** an administrative dashboard for editing prompts.
 The table plus the lint plus review is the versioning.

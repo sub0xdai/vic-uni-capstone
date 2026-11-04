@@ -86,7 +86,13 @@ function parseParameters(source: Row): GenerationParameters | null {
   ) {
     return null;
   }
-  return { model, temperature, systemPrompt, userPrompt };
+  return {
+    model,
+    temperature,
+    systemPrompt,
+    userPrompt,
+    promptVersion: text(source, "prompt_version"),
+  };
 }
 
 export function parseBusinessProfile(value: unknown): Result<BusinessProfile> {

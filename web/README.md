@@ -43,9 +43,15 @@ pnpm build    # production build
 ## Database
 
 The schema is `supabase/schema.sql`, for a fresh project.
-An existing project takes `supabase/2026-11-03-usage-and-rates.sql`, which adds the `usage` column and the `model_rate` table.
-Paste it into the SQL editor and run it.
-Without it, generation cannot save a draft.
+An existing project takes `supabase/2026-11-03-usage-and-rates.sql`, which adds the `usage` column and the `model_rate` table, then `supabase/2026-11-04-model-rate-policy.sql`, then `supabase/2026-11-05-prompt-template.sql`, which adds the `prompt_template` table and the `prompt_version` column.
+Paste each into the SQL editor and run it in that order.
+Without the last one, generation cannot save a draft.
+
+The built-in prompt bodies are in `web/lib/prompts.ts`.
+`prompt_template` overrides them: insert a row with a higher `version` and `is_active = true`, and the route uses it for every draft of that content type until a newer one is activated.
+Only one row per content type can be active, and clients can read the table but not write it, so a prompt changes through the SQL editor and review rather than at runtime.
+A body that stops naming a structure the scorer checks is refused and the built-in body is used instead.
+Every draft records which one it used as `prompt_version`, `builtin:1` or `template:<n>`.
 
 `generated_content.usage` holds the provider's own token count for the draft.
 `model_rate` holds a price per million tokens for each model, so the dashboard's cost figure is data rather than a constant copied into the code.

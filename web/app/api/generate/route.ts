@@ -7,7 +7,13 @@ import {
   generatorFromEnv,
   type ContentGenerator,
 } from "@/lib/generator";
-import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  promptVersionLabel,
+  resolveTemplate,
+  templateProblems,
+} from "@/lib/prompts";
 import { parseBusinessProfile, parseDraft } from "@/lib/rows";
 import { parseIdempotencyKey } from "@/lib/idempotency";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -117,11 +123,29 @@ export async function POST(request: Request) {
     return fail("You have reached your monthly generation limit.", 429);
   }
 
+  const { data: templateRows, error: templateError } = await supabase
+    .from("prompt_template")
+    .select("*")
+    .eq("content_type", input.contentType)
+    .eq("is_active", true);
+  if (templateError !== null) {
+    console.error(`Prompt templates could not be read: ${templateError.message}`);
+  }
+  const stored = resolveTemplate(templateRows ?? [], input.contentType);
+  const problems = stored === null ? [] : templateProblems(stored);
+  if (stored !== null && problems.length > 0) {
+    console.error(
+      `Prompt template ${stored.version} for ${input.contentType} is missing`,
+      problems.join(", "),
+    );
+  }
+  const template = problems.length === 0 ? stored : null;
+
   const system = buildSystemPrompt(profile.value);
   if (!system.ok) {
     return fail(system.error, 400);
   }
-  const userPrompt = buildUserPrompt({ ...input, profile: profile.value });
+  const userPrompt = buildUserPrompt({ ...input, profile: profile.value }, template);
   if (!userPrompt.ok) {
     return fail(userPrompt.error, 400);
   }
@@ -183,6 +207,7 @@ export async function POST(request: Request) {
       temperature: GENERATION_TEMPERATURE,
       system_prompt: system.value,
       user_prompt: userPrompt.value,
+      prompt_version: promptVersionLabel(template),
       analysis: evaluation.ok ? evaluation.value : null,
       usage: output.usage,
       idempotency_key: key,
