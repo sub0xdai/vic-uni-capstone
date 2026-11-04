@@ -200,8 +200,10 @@ The quality card lists the reasons, and the preview marks the span. A caption wi
 `web/lib/evaluate.ts` for the reasons, `web/components/quality-card.tsx` for the list, `web/components/draft-preview.tsx` for the marks.
 `web/lib/rows.ts` reads the reasons back, tolerating rows written before this card, since `analysis` is stored as JSON.
 
-**Data.** The shape of the stored `analysis` grows an optional reason list.
-Old reports must keep parsing, so the field is optional and validated on read.
+**Data.** None, and that is a change from the first draft of this card.
+The reasons are derived from the stored text when the report is rendered, with the same rules that produced the score.
+Storing them would duplicate a value the text already decides, and a report written before this card would then show a score with no reasons next to it.
+Derived means every stored draft gains the reasons with no migration and no back-compat branch.
 
 **Finished when.**
 A caption with no call to action lists the reason and scores 0.5 for structure.

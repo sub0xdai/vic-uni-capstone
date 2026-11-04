@@ -122,15 +122,21 @@ export function ctaMatch(text: string): string | null {
   return match === null ? null : match[0];
 }
 
-type StructurePart = {
+type StructureCheck = {
   id: string;
+  reason: string;
   test: (text: string) => boolean;
 };
 
-const BLOG_CHECKS: StructurePart[] = [
-  { id: "introduction", test: (text) => /\bintroduction\b/i.test(text) },
+const BLOG_CHECKS: StructureCheck[] = [
+  {
+    id: "introduction",
+    reason: "no introduction line",
+    test: (text) => /\bintroduction\b/i.test(text),
+  },
   {
     id: "headings",
+    reason: "needs three to six headings",
     test: (text) => {
       const sections = sectionHeadings(text).length;
       return sections >= 3 && sections <= 6;
@@ -138,48 +144,76 @@ const BLOG_CHECKS: StructurePart[] = [
   },
   {
     id: "conclusion",
+    reason: "no conclusion line",
     test: (text) => /\b(conclusion|summary|takeaway|wrap[- ]?up)\b/i.test(text),
   },
 ];
 
-const SOCIAL_CHECKS: StructurePart[] = [
+const SOCIAL_CHECKS: StructureCheck[] = [
   {
     id: "character limit",
+    reason: `over the ${SOCIAL_CAPTION_MAX} character limit`,
     test: (text) => text.trim().length > 0 && text.trim().length <= SOCIAL_CAPTION_MAX,
   },
-  { id: "call to action", test: (text) => CTA.test(text) },
+  {
+    id: "call to action",
+    reason: "no call to action",
+    test: (text) => CTA.test(text),
+  },
 ];
 
-const EMAIL_CHECKS: StructurePart[] = [
-  { id: "subject line", test: (text) => /\bsubject\b/i.test(text) },
-  { id: "preview line", test: (text) => /\bpreview\b/i.test(text) },
+const EMAIL_CHECKS: StructureCheck[] = [
+  {
+    id: "subject line",
+    reason: "no subject line",
+    test: (text) => /\bsubject\b/i.test(text),
+  },
+  {
+    id: "preview line",
+    reason: "no preview line",
+    test: (text) => /\bpreview\b/i.test(text),
+  },
   {
     id: "button",
+    reason: "no button or call to action",
     test: (text) => /\b(button|cta|call to action)\b/i.test(text) || CTA.test(text),
   },
 ];
 
-const CHECKS: Record<ContentType, StructurePart[]> = {
+const CHECKS: Record<ContentType, StructureCheck[]> = {
   blog_outline: BLOG_CHECKS,
   social_caption: SOCIAL_CHECKS,
   email_newsletter: EMAIL_CHECKS,
 };
 
-export type StructureResult = {
-  id: string;
-  passed: boolean;
-};
+export type StructureResult =
+  | { id: string; kind: "passed" }
+  | { id: string; kind: "failed"; reason: string };
 
 export function structureParts(text: string, contentType: ContentType): StructureResult[] {
   const parts = CHECKS[contentType];
   invariant(parts.length > 0, `no structure checks for ${contentType}`);
-  return parts.map((part) => ({ id: part.id, passed: part.test(text) }));
+  return parts.map((part) =>
+    part.test(text)
+      ? { id: part.id, kind: "passed" }
+      : { id: part.id, kind: "failed", reason: part.reason },
+  );
 }
 
 export function structureScore(text: string, contentType: ContentType): number {
   const parts = structureParts(text, contentType);
-  const passed = parts.filter((part) => part.passed).length;
+  const passed = parts.filter((part) => part.kind === "passed").length;
   return passed / parts.length;
+}
+
+export function structureReasons(text: string, contentType: ContentType): string[] {
+  const reasons: string[] = [];
+  for (const part of structureParts(text, contentType)) {
+    if (part.kind === "failed") {
+      reasons.push(part.reason);
+    }
+  }
+  return reasons;
 }
 
 function warmth(text: string): number {

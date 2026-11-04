@@ -275,7 +275,11 @@ export default function DraftPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Quality" subtitle="What the scorer said about this draft.">
-          <QualityCard report={draft.analysis} />
+          <QualityCard
+            report={draft.analysis}
+            contentType={draft.contentType}
+            text={draft.contentText}
+          />
         </Card>
 
         <Card

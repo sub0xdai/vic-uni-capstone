@@ -36,9 +36,16 @@ export function DraftPreview({ contentType, text }: DraftPreviewProps) {
   if (view.kind === "caption") {
     const cta = ctaMatch(view.text);
     const width = Math.min(100, Math.round((view.length / view.limit) * 100));
+    const kept = view.text.slice(0, view.limit);
+    const overflow = view.text.slice(view.limit);
     return (
       <div className={BLOCK}>
-        <p className="whitespace-pre-wrap text-sm text-neutral-800">{view.text}</p>
+        <p className="whitespace-pre-wrap text-sm text-neutral-800">
+          {kept}
+          {overflow.length === 0 ? null : (
+            <mark className="bg-red-100 text-red-800">{overflow}</mark>
+          )}
+        </p>
         <div className="mt-4">
           <div className="flex justify-between text-xs text-neutral-600">
             <span>Characters</span>

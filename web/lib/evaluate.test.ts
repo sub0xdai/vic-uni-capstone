@@ -8,6 +8,7 @@ import {
   rescoreText,
   satisfactionFrom,
   structureParts,
+  structureReasons,
   structureScore,
   toneAlignment,
 } from "./evaluate.ts";
@@ -260,7 +261,7 @@ test("the structure parts and the score always agree", () => {
   ];
   for (const sample of samples) {
     const parts = structureParts(sample.text, sample.contentType);
-    const passed = parts.filter((part) => part.passed).length;
+    const passed = parts.filter((part) => part.kind === "passed").length;
     assert.equal(parts.length >= 2, true);
     assert.equal(structureScore(sample.text, sample.contentType), passed / parts.length);
     assert.equal(new Set(parts.map((part) => part.id)).size, parts.length);
@@ -275,7 +276,32 @@ test("the caption limit is one number, and the boundary is exact", () => {
   assert.equal(structureScore(overLimit, "social_caption"), 0.5);
   const parts = structureParts(overLimit, "social_caption");
   assert.deepEqual(
-    parts.filter((part) => !part.passed).map((part) => part.id),
+    parts.filter((part) => part.kind === "failed").map((part) => part.id),
     ["character limit"],
   );
+});
+
+test("a failed part says what is missing, and a passing draft says nothing", () => {
+  assert.deepEqual(structureReasons(BLOG, "blog_outline"), []);
+  assert.deepEqual(structureReasons(EMAIL, "email_newsletter"), []);
+
+  const noButton = EMAIL.replace("Button: Book a tasting flight", "");
+  assert.deepEqual(structureReasons(noButton, "email_newsletter"), [
+    "no button or call to action",
+  ]);
+
+  const shapeless = "A caption with no ask in it at all.";
+  assert.deepEqual(structureReasons(shapeless, "social_caption"), ["no call to action"]);
+
+  const overLimit = "a".repeat(SOCIAL_CAPTION_MAX + 1);
+  assert.deepEqual(structureReasons(overLimit, "social_caption"), [
+    `over the ${SOCIAL_CAPTION_MAX} character limit`,
+    "no call to action",
+  ]);
+
+  for (const part of structureParts(shapeless, "social_caption")) {
+    if (part.kind === "failed") {
+      assert.equal(part.reason.length > 0, true);
+    }
+  }
 });

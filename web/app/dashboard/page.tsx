@@ -365,7 +365,11 @@ export default function DashboardPage() {
 
       {latest === null ? null : (
         <Card title="Latest draft quality" subtitle={latest.topic}>
-          <QualityCard report={latest.analysis} />
+          <QualityCard
+            report={latest.analysis}
+            contentType={latest.contentType}
+            text={latest.contentText}
+          />
         </Card>
       )}
 

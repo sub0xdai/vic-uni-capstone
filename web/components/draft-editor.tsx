@@ -73,9 +73,11 @@ export function DraftEditor({ draft, onSave, onRate, onCopy }: DraftEditorProps)
         {parts.map((part) => (
           <span
             key={part.id}
-            aria-label={`${part.id}: ${part.passed ? "found" : "missing"}`}
+            aria-label={`${part.id}: ${part.kind === "passed" ? "found" : "missing"}`}
             className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-              part.passed ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
+              part.kind === "passed"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-neutral-100 text-neutral-500"
             }`}
           >
             {part.id}

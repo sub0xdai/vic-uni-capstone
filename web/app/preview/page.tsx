@@ -4,9 +4,9 @@ import { useState } from "react";
 import { DraftEditor } from "@/components/draft-editor";
 import { DraftList } from "@/components/draft-list";
 import { DraftPreview } from "@/components/draft-preview";
-import {
-  statusCounts,
-} from "@/lib/types";
+import { QualityCard } from "@/components/quality-card";
+import { evaluateDraft } from "@/lib/evaluate";
+import { statusCounts } from "@/lib/types";
 import { GeneratorPanel } from "@/components/generator-panel";
 import { ProfileForm } from "@/components/profile-form";
 import { PromptPanel } from "@/components/prompt-panel";
@@ -115,6 +115,14 @@ Hi there, here are three ways to fill a slow afternoon.
 Button: Book a tasting flight`;
 
 const PREVIEW_LABEL = "mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500";
+
+const REASONED = evaluateDraft({
+  contentText: OVER_LIMIT.contentText,
+  contentType: "social_caption",
+  keywords: OVER_LIMIT.keywords,
+  brandTone: "friendly",
+  rating: OVER_LIMIT.rating,
+});
 
 export default function PreviewPage() {
   const [draftFilter, setDraftFilter] = useState<StatusFilter>("all");
@@ -257,6 +265,19 @@ export default function PreviewPage() {
             <DraftPreview contentType="blog_outline" text={OUTLINE_TEXT} />
           </div>
         </div>
+      </Card>
+
+      <Card
+        title="P1.3 Quality card with reasons"
+        subtitle="The structure score lists what the draft is missing, from the text itself."
+      >
+        {REASONED.ok ? (
+          <QualityCard
+            report={REASONED.value}
+            contentType="social_caption"
+            text={OVER_LIMIT.contentText}
+          />
+        ) : null}
       </Card>
 
       <Card
