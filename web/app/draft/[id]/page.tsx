@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DraftEditor } from "@/components/draft-editor";
+import { DraftPreview } from "@/components/draft-preview";
 import { PromptPanel } from "@/components/prompt-panel";
 import { QualityCard } from "@/components/quality-card";
 import { Button, Card } from "@/components/ui";
@@ -267,17 +268,23 @@ export default function DraftPage() {
           />
         </Card>
 
-        <Card title="Quality" subtitle="What the scorer said about this draft.">
-          <QualityCard report={draft.analysis} />
+        <Card title="Preview" subtitle="What the reader will see, in this format.">
+          <DraftPreview contentType={draft.contentType} text={draft.contentText} />
         </Card>
       </div>
 
-      <Card
-        title="How this draft was made"
-        subtitle="The exact prompt text stored with the draft, and the version that produced it."
-      >
-        <PromptPanel parameters={draft.parameters} />
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="Quality" subtitle="What the scorer said about this draft.">
+          <QualityCard report={draft.analysis} />
+        </Card>
+
+        <Card
+          title="How this draft was made"
+          subtitle="The prompt text stored with the draft, and the version that produced it."
+        >
+          <PromptPanel parameters={draft.parameters} />
+        </Card>
+      </div>
 
       <Link
         href="/dashboard"

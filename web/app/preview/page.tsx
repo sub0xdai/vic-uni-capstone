@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DraftEditor } from "@/components/draft-editor";
 import { DraftList } from "@/components/draft-list";
+import { DraftPreview } from "@/components/draft-preview";
 import {
   statusCounts,
 } from "@/lib/types";
@@ -98,6 +99,22 @@ const OVER_LIMIT: Draft = {
     "the weekend, ask the counter for a taste, and tell us what you notice.",
   ].join(" "),
 };
+
+const OUTLINE_TEXT = `Introduction
+We help cafe owners fill quiet afternoons.
+Three Ways To Fill A Quiet Tuesday
+1. Run a tasting flight for regulars.
+2. Pair a pastry with every coffee sold after two.
+3. Invite the local book club to host its meeting here.
+Conclusion
+Book a tasting flight this week and see the difference.`;
+
+const EMAIL_TEXT = `Subject: A quieter Tuesday, solved
+Preview: Three ways to fill the afternoon
+Hi there, here are three ways to fill a slow afternoon.
+Button: Book a tasting flight`;
+
+const PREVIEW_LABEL = "mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500";
 
 export default function PreviewPage() {
   const [draftFilter, setDraftFilter] = useState<StatusFilter>("all");
@@ -221,6 +238,26 @@ export default function PreviewPage() {
           />
         </Card>
       </div>
+
+      <Card
+        title="P1.2 Format preview"
+        subtitle="One panel, three formats. A caption over the limit is marked."
+      >
+        <div className="grid gap-6 md:grid-cols-3">
+          <div>
+            <p className={PREVIEW_LABEL}>Caption</p>
+            <DraftPreview contentType="social_caption" text={OVER_LIMIT.contentText} />
+          </div>
+          <div>
+            <p className={PREVIEW_LABEL}>Email</p>
+            <DraftPreview contentType="email_newsletter" text={EMAIL_TEXT} />
+          </div>
+          <div>
+            <p className={PREVIEW_LABEL}>Outline</p>
+            <DraftPreview contentType="blog_outline" text={OUTLINE_TEXT} />
+          </div>
+        </div>
+      </Card>
 
       <Card
         title="P1.1 How the draft was made"

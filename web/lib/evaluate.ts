@@ -110,11 +110,16 @@ export function keywordCoverage(text: string, keywords: readonly string[]): numb
   return hits / wanted.length;
 }
 
-function sectionHeadings(text: string): string[] {
+export function sectionHeadings(text: string): string[] {
   return text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => HEADING.test(line) || LABEL_LINE.test(line));
+}
+
+export function ctaMatch(text: string): string | null {
+  const match = text.match(CTA);
+  return match === null ? null : match[0];
 }
 
 type StructurePart = {
