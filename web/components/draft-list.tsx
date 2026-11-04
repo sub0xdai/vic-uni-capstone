@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Stars } from "@/components/ui";
 import {
   CONTENT_TYPE_LABELS,
@@ -110,7 +111,14 @@ export function DraftList({
             <li key={draft.id} className={ROW}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-neutral-900">{draft.topic}</p>
+                  <Link
+                    href={`/draft/${draft.id}`}
+                    className={
+                      "text-sm font-bold text-neutral-900 hover:text-indigo-600 hover:underline"
+                    }
+                  >
+                    {draft.topic}
+                  </Link>
                   <p className="mt-0.5 text-xs text-slate-500">
                     {CONTENT_TYPE_LABELS[draft.contentType]} - {formatDate(draft.createdAt)}
                   </p>

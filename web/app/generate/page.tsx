@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
 import { Card } from "@/components/ui";
-import { applyRating, rescoreText } from "@/lib/evaluate";
+import { applyRating } from "@/lib/evaluate";
+import { planDraftSave } from "@/lib/draft-save";
 import { parseBusinessProfile } from "@/lib/rows";
 import { requestFromSearch } from "@/lib/reuse";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
@@ -161,18 +162,9 @@ function GenerateScreen() {
       setNote({ kind: "error", text: client.error });
       return;
     }
-    let analysis = draft.analysis;
-    let problem: string | null = null;
-    if (profile === null) {
-      problem = "your business profile did not load";
-    } else {
-      const rescored = rescoreText(draft, text, profile.brandTone);
-      if (rescored.ok) {
-        analysis = rescored.value;
-      } else {
-        problem = rescored.error;
-      }
-    }
+    const plan = planDraftSave(draft, text, profile?.brandTone ?? null);
+    const analysis = plan.analysis;
+    const problem = plan.outcome.kind === "skipped" ? plan.outcome.reason : null;
     const { error } = await client.value
       .from("generated_content")
       .update({ content_text: text, analysis })

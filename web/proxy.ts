@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { invariant } from "@/lib/assert";
 import { optionalEnv } from "@/lib/env";
 
-const GUARDED = ["/dashboard", "/onboarding", "/generate"];
+const GUARDED = ["/dashboard", "/onboarding", "/generate", "/draft"];
 const SIGN_IN = "/login";
 
 export async function proxy(request: NextRequest) {
