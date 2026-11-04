@@ -16,6 +16,20 @@ export type DraftStatus = (typeof DRAFT_STATUSES)[number];
 
 export type StatusFilter = "all" | DraftStatus;
 
+export const INDUSTRIES = [
+  "Hospitality",
+  "Retail",
+  "Professional services",
+  "Health and wellness",
+  "Trades and construction",
+  "Creative and media",
+  "Education",
+  "Technology",
+  "Other",
+] as const;
+
+export type Industry = (typeof INDUSTRIES)[number];
+
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   blog_outline: "Blog outline",
   social_caption: "Social media caption",
@@ -140,6 +154,10 @@ export function isContentType(value: unknown): value is ContentType {
 
 export function isBrandTone(value: unknown): value is BrandTone {
   return typeof value === "string" && (BRAND_TONES as readonly string[]).includes(value);
+}
+
+export function isIndustry(value: unknown): value is Industry {
+  return typeof value === "string" && (INDUSTRIES as readonly string[]).includes(value);
 }
 
 export function isDraftStatus(value: unknown): value is DraftStatus {

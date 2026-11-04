@@ -6,6 +6,8 @@ import { validateProfileDraft, type ProfileField } from "@/lib/profile";
 import {
   BRAND_TONE_LABELS,
   BRAND_TONES,
+  INDUSTRIES,
+  isIndustry,
   type BusinessProfileDraft,
   type Result,
 } from "@/lib/types";
@@ -16,12 +18,11 @@ export type ProfileFormProps = {
 };
 
 const TEXT_FIELDS: {
-  field: Exclude<ProfileField, "brandTone">;
+  field: Exclude<ProfileField, "brandTone" | "industry">;
   label: string;
   rows: number;
 }[] = [
   { field: "businessName", label: "Business name", rows: 0 },
-  { field: "industry", label: "Industry", rows: 0 },
   { field: "description", label: "Description", rows: 3 },
   { field: "targetAudience", label: "Target audience", rows: 3 },
 ];
@@ -30,6 +31,12 @@ export function ProfileForm({ initial = null, onSave }: ProfileFormProps) {
   const [errors, setErrors] = useState<Partial<Record<ProfileField, string>>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const keptIndustry =
+    initial === null || initial.industry.length === 0 || isIndustry(initial.industry)
+      ? null
+      : initial.industry;
+  const industries: readonly string[] =
+    keptIndustry === null ? INDUSTRIES : [keptIndustry, ...INDUSTRIES];
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +84,22 @@ export function ProfileForm({ initial = null, onSave }: ProfileFormProps) {
           </Field>
         );
       })}
+
+      <Field label="Industry" error={errors.industry}>
+        <select
+          name="industry"
+          defaultValue={initial === null ? "" : initial.industry}
+          className={controlClassFor(errors.industry !== undefined)}
+          aria-invalid={errors.industry !== undefined}
+        >
+          <option value="">Select an industry</option>
+          {industries.map((industry) => (
+            <option key={industry} value={industry}>
+              {industry === keptIndustry ? `${industry} (current)` : industry}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Brand tone" error={errors.brandTone}>
         <select
