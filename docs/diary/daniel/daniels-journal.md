@@ -14,7 +14,8 @@ Entries get added when something finishes, even if that is late.
 - `G5` is written: `FR-01` to `FR-25` with a MoSCoW table in section 2, an NFR register with a measurement column in section 3, twelve exception flows in section 4, a risk register with owners in section 9, and the missing dependency list in section 10.
 - `G3` is designed and the tool exists (`tools/evaluation`). What is left is the export and ratings from people outside the build.
 - The prompt template path is proven on the live project for the fallback only: a caption generated after the migration stored `prompt_version = builtin:1`. A stored template has never been active.
-- Not done: nothing deployed, nothing load tested, the generation-lock migration not pasted (without it every generation now fails), and no raters for the experiment.
+- Not done: nothing deployed, nothing load tested, and no raters for the experiment.
+- Both pending migrations were run on the live project on 4 November. `generation_lock` exists, and `model_rate` now answers the public key with the seeded price, which is the read the RLS audit failed the day before.
 
 ## Where things stand, 3 November 2026
 
