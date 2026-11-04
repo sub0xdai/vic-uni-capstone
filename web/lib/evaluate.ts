@@ -2,6 +2,7 @@ import { invariant } from "./assert.ts";
 import { assertQualityReport, metricsOf, weightedScore } from "./score.ts";
 import {
   RATING_MAX,
+  SOCIAL_CAPTION_MAX,
   type BrandTone,
   type ContentType,
   type Draft,
@@ -116,39 +117,64 @@ function sectionHeadings(text: string): string[] {
     .filter((line) => HEADING.test(line) || LABEL_LINE.test(line));
 }
 
-type Check = (text: string) => boolean;
+type StructurePart = {
+  id: string;
+  test: (text: string) => boolean;
+};
 
-const BLOG_CHECKS: Check[] = [
-  (text) => /\bintroduction\b/i.test(text),
-  (text) => {
-    const sections = sectionHeadings(text).length;
-    return sections >= 3 && sections <= 6;
+const BLOG_CHECKS: StructurePart[] = [
+  { id: "introduction", test: (text) => /\bintroduction\b/i.test(text) },
+  {
+    id: "headings",
+    test: (text) => {
+      const sections = sectionHeadings(text).length;
+      return sections >= 3 && sections <= 6;
+    },
   },
-  (text) => /\b(conclusion|summary|takeaway|wrap[- ]?up)\b/i.test(text),
+  {
+    id: "conclusion",
+    test: (text) => /\b(conclusion|summary|takeaway|wrap[- ]?up)\b/i.test(text),
+  },
 ];
 
-const SOCIAL_CHECKS: Check[] = [
-  (text) => text.trim().length > 0 && text.trim().length <= 280,
-  (text) => CTA.test(text),
+const SOCIAL_CHECKS: StructurePart[] = [
+  {
+    id: "character limit",
+    test: (text) => text.trim().length > 0 && text.trim().length <= SOCIAL_CAPTION_MAX,
+  },
+  { id: "call to action", test: (text) => CTA.test(text) },
 ];
 
-const EMAIL_CHECKS: Check[] = [
-  (text) => /\bsubject\b/i.test(text),
-  (text) => /\bpreview\b/i.test(text),
-  (text) => /\b(button|cta|call to action)\b/i.test(text) || CTA.test(text),
+const EMAIL_CHECKS: StructurePart[] = [
+  { id: "subject line", test: (text) => /\bsubject\b/i.test(text) },
+  { id: "preview line", test: (text) => /\bpreview\b/i.test(text) },
+  {
+    id: "button",
+    test: (text) => /\b(button|cta|call to action)\b/i.test(text) || CTA.test(text),
+  },
 ];
 
-const CHECKS: Record<ContentType, Check[]> = {
+const CHECKS: Record<ContentType, StructurePart[]> = {
   blog_outline: BLOG_CHECKS,
   social_caption: SOCIAL_CHECKS,
   email_newsletter: EMAIL_CHECKS,
 };
 
+export type StructureResult = {
+  id: string;
+  passed: boolean;
+};
+
+export function structureParts(text: string, contentType: ContentType): StructureResult[] {
+  const parts = CHECKS[contentType];
+  invariant(parts.length > 0, `no structure checks for ${contentType}`);
+  return parts.map((part) => ({ id: part.id, passed: part.test(text) }));
+}
+
 export function structureScore(text: string, contentType: ContentType): number {
-  const checks = CHECKS[contentType];
-  invariant(checks.length > 0, `no structure checks for ${contentType}`);
-  const passed = checks.filter((check) => check(text)).length;
-  return passed / checks.length;
+  const parts = structureParts(text, contentType);
+  const passed = parts.filter((part) => part.passed).length;
+  return passed / parts.length;
 }
 
 function warmth(text: string): number {

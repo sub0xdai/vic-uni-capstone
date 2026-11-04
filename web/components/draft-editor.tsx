@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button, Stars, controlClass } from "@/components/ui";
-import type { Draft } from "@/lib/types";
+import { structureParts } from "@/lib/evaluate";
+import { SOCIAL_CAPTION_MAX, type Draft } from "@/lib/types";
 
 export type DraftEditorProps = {
   draft: Draft;
@@ -30,6 +31,12 @@ export function DraftEditor({ draft, onSave, onRate, onCopy }: DraftEditorProps)
   }, [copy]);
 
   const changed = text !== draft.contentText;
+  const length = text.trim().length;
+  const overBudget = length > SOCIAL_CAPTION_MAX;
+  const parts =
+    draft.contentType === "social_caption"
+      ? structureParts(text, draft.contentType).filter((part) => part.id !== "character limit")
+      : structureParts(text, draft.contentType);
 
   async function copyText() {
     try {
@@ -52,6 +59,29 @@ export function DraftEditor({ draft, onSave, onRate, onCopy }: DraftEditorProps)
           setText(event.target.value);
         }}
       />
+
+      <div className="flex flex-wrap items-center gap-2" aria-label="What the scorer looks for">
+        {draft.contentType === "social_caption" ? (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+              overBudget ? "bg-red-50 text-red-700" : "bg-neutral-100 text-neutral-600"
+            }`}
+          >
+            {`${length} / ${SOCIAL_CAPTION_MAX}`}
+          </span>
+        ) : null}
+        {parts.map((part) => (
+          <span
+            key={part.id}
+            aria-label={`${part.id}: ${part.passed ? "found" : "missing"}`}
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+              part.passed ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
+            }`}
+          >
+            {part.id}
+          </span>
+        ))}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button

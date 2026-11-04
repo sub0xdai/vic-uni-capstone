@@ -2,6 +2,7 @@ import { invariant } from "./assert.ts";
 import {
   BRAND_TONE_LABELS,
   CONTENT_TYPES,
+  SOCIAL_CAPTION_MAX,
   err,
   ok,
   type BrandTone,
@@ -34,7 +35,7 @@ const TONE_GUIDE: Record<BrandTone, string> = {
 export const FORMAT_RULES: Record<ContentType, string> = {
   social_caption: [
     "Write one social media caption.",
-    "Keep it under 280 characters.",
+    `Keep it under ${SOCIAL_CAPTION_MAX} characters.`,
     "Start with a short hook, state the message, end with a clear call to action,",
     "and add 2 to 4 relevant hashtags.",
   ].join(" "),
@@ -56,7 +57,7 @@ export const FORMAT_RULES: Record<ContentType, string> = {
 
 export const STRUCTURE_HINTS: Record<ContentType, readonly string[]> = {
   blog_outline: ["introduction", "heading", "conclusion"],
-  social_caption: ["280", "call to action"],
+  social_caption: [String(SOCIAL_CAPTION_MAX), "call to action"],
   email_newsletter: ["Subject:", "Preview:", "Button:"],
 };
 

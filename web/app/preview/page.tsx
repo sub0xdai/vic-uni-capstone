@@ -46,7 +46,7 @@ const DRAFT: Draft = {
     "Something new just landed on the shelf. Our single origin Ethiopian is",
     "bright, floral and made for slow mornings.",
     "",
-    "Grab a bag this week and tell us what you taste.",
+    "Book a bag this week and tell us what you taste.",
   ].join("\n"),
   rating: 4,
   status: "draft",
@@ -84,6 +84,19 @@ const PREVIEW_DRAFTS: Draft[] = [
     statusChangedAt: new Date("2026-10-04T10:00:00Z").toISOString(),
   },
 ];
+
+const OVER_LIMIT: Draft = {
+  ...DRAFT,
+  id: "00000000-0000-0000-0000-000000000006",
+  topic: "Long caption sample",
+  contentText: [
+    "Something new just landed on the shelf, and if you like bright, floral",
+    "coffee with a little acidity then this one is for you. Our single origin",
+    "Ethiopian is picked by hand, roasted in small batches every Monday, and",
+    "it is at its best in the first three weeks after roasting. Come in before",
+    "the weekend, ask the counter for a taste, and tell us what you notice.",
+  ].join(" "),
+};
 
 export default function PreviewPage() {
   const [draftFilter, setDraftFilter] = useState<StatusFilter>("all");
@@ -171,6 +184,18 @@ export default function PreviewPage() {
             draft={DRAFT}
             onSave={() => {}}
             onRate={(rating) => setStars(rating)}
+            onCopy={() => {}}
+          />
+        </Card>
+
+        <Card
+          title="W3.2 Draft editor, over the caption limit"
+          subtitle="Owner B. The budget turns red and a missing structure stays grey."
+        >
+          <DraftEditor
+            draft={OVER_LIMIT}
+            onSave={() => {}}
+            onRate={() => {}}
             onCopy={() => {}}
           />
         </Card>

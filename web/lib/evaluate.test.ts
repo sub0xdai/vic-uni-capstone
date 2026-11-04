@@ -7,6 +7,7 @@ import {
   readabilityScore,
   rescoreText,
   satisfactionFrom,
+  structureParts,
   structureScore,
   toneAlignment,
 } from "./evaluate.ts";
@@ -14,6 +15,7 @@ import { assertQualityReport, weightedScore } from "./score.ts";
 import {
   QUALITY_METRICS,
   QUALITY_THRESHOLD,
+  SOCIAL_CAPTION_MAX,
   type Draft,
   type QualityReport,
 } from "./types.ts";
@@ -248,4 +250,32 @@ test("an edit too short to score comes back as a refusal, not as a zero", () => 
   if (!edited.ok) {
     assert.match(edited.error, /too short/);
   }
+});
+
+test("the structure parts and the score always agree", () => {
+  const samples = [
+    { contentType: "blog_outline" as const, text: BLOG },
+    { contentType: "social_caption" as const, text: SOCIAL },
+    { contentType: "email_newsletter" as const, text: EMAIL },
+  ];
+  for (const sample of samples) {
+    const parts = structureParts(sample.text, sample.contentType);
+    const passed = parts.filter((part) => part.passed).length;
+    assert.equal(parts.length >= 2, true);
+    assert.equal(structureScore(sample.text, sample.contentType), passed / parts.length);
+    assert.equal(new Set(parts.map((part) => part.id)).size, parts.length);
+  }
+});
+
+test("the caption limit is one number, and the boundary is exact", () => {
+  const atLimit = `${"a".repeat(SOCIAL_CAPTION_MAX - 5)} book`;
+  const overLimit = `${atLimit} now`;
+  assert.equal(atLimit.length, SOCIAL_CAPTION_MAX);
+  assert.equal(structureScore(atLimit, "social_caption"), 1);
+  assert.equal(structureScore(overLimit, "social_caption"), 0.5);
+  const parts = structureParts(overLimit, "social_caption");
+  assert.deepEqual(
+    parts.filter((part) => !part.passed).map((part) => part.id),
+    ["character limit"],
+  );
 });

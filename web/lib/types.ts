@@ -48,6 +48,8 @@ export const QUALITY_METRICS = Object.keys(QUALITY_WEIGHTS) as QualityMetric[];
 
 export const QUALITY_THRESHOLD = 0.6;
 
+export const SOCIAL_CAPTION_MAX = 280;
+
 export type QualityReport = Record<QualityMetric, number> & { overallScore: number };
 
 export type BusinessProfile = {
