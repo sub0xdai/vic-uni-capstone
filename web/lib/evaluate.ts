@@ -4,6 +4,7 @@ import {
   RATING_MAX,
   type BrandTone,
   type ContentType,
+  type Draft,
   type QualityMetric,
   type QualityReport,
   type Result,
@@ -210,4 +211,21 @@ export function applyRating(report: QualityReport, rating: number): QualityRepor
   const next: QualityReport = { ...metrics, overallScore: weightedScore(metrics) };
   assertQualityReport(next);
   return next;
+}
+
+export function rescoreText(
+  draft: Draft,
+  text: string,
+  brandTone: BrandTone,
+): Result<QualityReport> {
+  invariant(draft !== null && typeof draft === "object", "rescore got no draft");
+  invariant(typeof text === "string", "rescore got no text");
+  invariant(Array.isArray(draft.keywords), "rescore got a draft with no keyword list");
+  return evaluateDraft({
+    contentText: text,
+    contentType: draft.contentType,
+    keywords: draft.keywords,
+    brandTone,
+    rating: draft.rating,
+  });
 }

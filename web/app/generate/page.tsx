@@ -5,7 +5,7 @@ import Link from "next/link";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
 import { Card } from "@/components/ui";
-import { applyRating } from "@/lib/evaluate";
+import { applyRating, rescoreText } from "@/lib/evaluate";
 import { parseBusinessProfile } from "@/lib/rows";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import { isContentType, type BusinessProfile, type Draft } from "@/lib/types";
@@ -146,16 +146,32 @@ export default function GeneratePage() {
       setNote({ kind: "error", text: client.error });
       return;
     }
+    let analysis = draft.analysis;
+    let problem: string | null = null;
+    if (profile === null) {
+      problem = "your business profile did not load";
+    } else {
+      const rescored = rescoreText(draft, text, profile.brandTone);
+      if (rescored.ok) {
+        analysis = rescored.value;
+      } else {
+        problem = rescored.error;
+      }
+    }
     const { error } = await client.value
       .from("generated_content")
-      .update({ content_text: text })
+      .update({ content_text: text, analysis })
       .eq("id", draft.id);
     if (error !== null) {
       setNote({ kind: "error", text: `Could not save your changes: ${error.message}` });
       return;
     }
-    setDraft({ ...draft, contentText: text });
-    setNote({ kind: "info", text: "Changes saved." });
+    setDraft({ ...draft, contentText: text, analysis });
+    setNote(
+      problem === null
+        ? { kind: "info", text: "Changes saved." }
+        : { kind: "error", text: `Saved, but the score was not updated: ${problem}.` },
+    );
   }
 
   async function rate(rating: number) {

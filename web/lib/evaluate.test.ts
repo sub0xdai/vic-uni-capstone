@@ -5,12 +5,18 @@ import {
   evaluateDraft,
   keywordCoverage,
   readabilityScore,
+  rescoreText,
   satisfactionFrom,
   structureScore,
   toneAlignment,
 } from "./evaluate.ts";
 import { assertQualityReport, weightedScore } from "./score.ts";
-import { QUALITY_METRICS, QUALITY_THRESHOLD, type QualityReport } from "./types.ts";
+import {
+  QUALITY_METRICS,
+  QUALITY_THRESHOLD,
+  type Draft,
+  type QualityReport,
+} from "./types.ts";
 
 const BLOG = `Introduction
 We help cafe owners fill quiet afternoons.
@@ -177,4 +183,69 @@ test("a report whose overall score had drifted is refused before it is rewritten
   const report = unrated();
   const drifted: QualityReport = { ...report, overallScore: report.overallScore + 0.2 };
   assert.throws(() => applyRating(drifted, 5));
+});
+
+function draft(overrides: Partial<Draft> = {}): Draft {
+  return {
+    id: "d1",
+    userId: "u1",
+    contentType: "social_caption",
+    topic: "Quiet Tuesday",
+    keywords: ["tasting"],
+    contentText: SOCIAL,
+    rating: 5,
+    status: "draft",
+    statusChangedAt: null,
+    analysis: null,
+    parameters: null,
+    usage: null,
+    createdAt: "2026-11-05T09:00:00.000Z",
+    ...overrides,
+  };
+}
+
+const TOO_LONG =
+  "Quiet Tuesday? Bring a friend and try our new single origin flight this week. " +
+  "We roast in small batches every Monday, and the shelf is always changing. " +
+  "Book a tasting flight and tell us which one you liked best. " +
+  "Regulars get first pick of the Monday roast, so ask at the counter this week.";
+
+test("saving an edit rescores the new text and keeps the rating", () => {
+  const edited = rescoreText(draft(), TOO_LONG, "friendly");
+  assert.equal(edited.ok, true);
+  if (!edited.ok) {
+    return;
+  }
+  assert.equal(edited.value.userSatisfactionScore, 1);
+  assert.equal(edited.value.structureScore, 0.5);
+  assertQualityReport(edited.value);
+
+  const direct = evaluateDraft({
+    contentText: TOO_LONG,
+    contentType: "social_caption",
+    keywords: ["tasting"],
+    brandTone: "friendly",
+    rating: 5,
+  });
+  assert.deepEqual(edited.value, direct.ok ? direct.value : null);
+});
+
+test("a rescore reads the rating from the draft, never from a default", () => {
+  const rated = rescoreText(draft(), SOCIAL, "friendly");
+  const neutral = rescoreText(draft({ rating: null }), SOCIAL, "friendly");
+  assert.equal(rated.ok && neutral.ok, true);
+  if (!rated.ok || !neutral.ok) {
+    return;
+  }
+  assert.equal(rated.value.userSatisfactionScore, 1);
+  assert.equal(neutral.value.userSatisfactionScore, 0.5);
+  assert.ok(rated.value.overallScore > neutral.value.overallScore);
+});
+
+test("an edit too short to score comes back as a refusal, not as a zero", () => {
+  const edited = rescoreText(draft(), "ok", "friendly");
+  assert.equal(edited.ok, false);
+  if (!edited.ok) {
+    assert.match(edited.error, /too short/);
+  }
 });
