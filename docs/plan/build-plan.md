@@ -110,6 +110,9 @@ It no longer is, because a stored template is now linted at request time against
 
 Declined, with the reasons recorded in the response document: a prompt editing dashboard, a cache layer, shortening prompts for cost, and an agent layer for personalisation.
 
+Seven further cards, four to polish what exists and three to extend it, are in `docs/plan/p0-p1-plan.md`.
+They come after the `F` cards and before `G5`, and they change no schema.
+
 ### In progress
 
 Empty. Nothing started that is unfinished.
