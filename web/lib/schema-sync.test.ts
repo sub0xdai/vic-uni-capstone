@@ -71,3 +71,10 @@ test("a draft records the prompt version that produced it", () => {
 test("only one template per content type can be active", () => {
   assert.match(SQL, /create unique index prompt_template_one_active_idx[^;]*where is_active/);
 });
+
+test("a user can hold exactly one generation lock", () => {
+  assert.match(SQL, /create table generation_lock \(\s*user_id uuid primary key/);
+  assert.match(SQL, /alter table generation_lock enable row level security/);
+  assert.match(SQL, /grant select, insert, delete on generation_lock to authenticated/);
+  assert.doesNotMatch(SQL, /grant [^;]*update[^;]*generation_lock/);
+});

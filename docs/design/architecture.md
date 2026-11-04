@@ -248,10 +248,13 @@ Recorded so the decision is visible as a decision rather than an omission.
 
 Open items, recorded honestly.
 
-**Double submission on generate.**
-The brief specifies one generation per user at a time.
-The current design allows a double-click to post twice, creating two drafts and two billable model calls.
-The fix is a client-supplied request identifier with a unique constraint on the drafts table.
+**Double submission on generate, and what is left of it.**
+The brief specifies one generation per user at a time, and two mechanisms now hold it.
+A client-supplied request identifier with a unique constraint makes a retry return the first draft instead of buying a second one.
+`generation_lock` makes concurrency explicit: a request takes its own row before the model call and releases it in a `finally`, and a second request while one is running is answered with 429.
+The lock lives in the database rather than in process memory, so it holds across instances.
+What is left is the abandoned case: a row older than ninety seconds is treated as crashed and cleared, so a generation that somehow ran longer than that could overlap with the next request.
+The model timeout is thirty seconds, so the margin is three times the maximum call.
 
 **`proxy.ts` imports the Supabase SDK directly.**
 It is the single exception to the ports boundary in section 3.7.

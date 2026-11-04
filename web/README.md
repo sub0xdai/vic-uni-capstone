@@ -44,9 +44,15 @@ pnpm build    # production build
 ## Database
 
 The schema is `supabase/schema.sql`, for a fresh project.
-An existing project takes `supabase/2026-11-03-usage-and-rates.sql`, which adds the `usage` column and the `model_rate` table, then `supabase/2026-11-04-model-rate-policy.sql`, then `supabase/2026-11-05-prompt-template.sql`, which adds the `prompt_template` table and the `prompt_version` column.
+An existing project takes `supabase/2026-11-03-usage-and-rates.sql`, which adds the `usage` column and the `model_rate` table, then `supabase/2026-11-04-model-rate-policy.sql`, then `supabase/2026-11-05-prompt-template.sql`, which adds the `prompt_template` table and the `prompt_version` column, then `supabase/2026-11-05-generation-lock.sql`, which adds `generation_lock`.
 Paste each into the SQL editor and run it in that order.
-Without the last one, generation cannot save a draft.
+Without `prompt-template`, generation cannot save a draft.
+Without `generation-lock`, every generation request fails with "The generation could not start."
+
+The lock table is how the route honours "one generation per user at a time".
+A request takes its own row before calling the model and releases it when it finishes, including on failure.
+A second request while one is running is answered with 429 and a plain message rather than a second billable call.
+A row older than 90 seconds is treated as abandoned and cleared, so a crashed request cannot lock its owner out.
 
 The built-in prompt bodies are in `web/lib/prompts.ts`.
 `prompt_template` overrides them: insert a row with a higher `version` and `is_active = true`, and the route uses it for every draft of that content type until a newer one is activated.

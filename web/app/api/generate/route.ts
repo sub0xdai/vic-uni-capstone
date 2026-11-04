@@ -20,7 +20,9 @@ import { supabaseServer } from "@/lib/supabase/server";
 import {
   MONTHLY_LIMIT,
   parseGenerationRequest,
+  type BusinessProfile,
   type GenerationFailure,
+  type GenerationRequest,
 } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -28,7 +30,10 @@ export const runtime = "nodejs";
 const AI_FAILED = "The AI service could not generate content. Please try again.";
 const AI_NO_RESPONSE = "The AI service did not respond. Please try again.";
 const AI_NOT_SET_UP = "The AI service is not set up yet.";
+const LOCK_BUSY = "A generation is already running. Wait for it to finish.";
+const LOCK_FAILED = "The generation could not start. Please try again.";
 const UNIQUE_VIOLATION = "23505";
+const LOCK_TTL_MS = 90_000;
 
 const FAILURES: Record<GenerationFailure["kind"], { status: number; message: string }> = {
   timeout: { status: 504, message: AI_NO_RESPONSE },
@@ -37,12 +42,54 @@ const FAILURES: Record<GenerationFailure["kind"], { status: number; message: str
   unusable: { status: 502, message: AI_FAILED },
 };
 
+type QueryClient = Awaited<ReturnType<typeof supabaseServer>>;
+
+type LockResult =
+  | { kind: "acquired" }
+  | { kind: "busy" }
+  | { kind: "failed"; detail: string };
+
+type GenerateDraftDeps = {
+  supabase: QueryClient;
+  userId: string;
+  profile: BusinessProfile;
+  input: GenerationRequest;
+  key: string | null;
+};
+
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
 function startOfMonthUtc(now: Date): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+async function acquireLock(supabase: QueryClient, userId: string): Promise<LockResult> {
+  const staleBefore = new Date(Date.now() - LOCK_TTL_MS).toISOString();
+  const { error: clearError } = await supabase
+    .from("generation_lock")
+    .delete()
+    .eq("user_id", userId)
+    .lt("acquired_at", staleBefore);
+  if (clearError !== null) {
+    console.error(`Could not clear a stale generation lock: ${clearError.message}`);
+  }
+  const { error } = await supabase.from("generation_lock").insert({ user_id: userId });
+  if (error === null) {
+    return { kind: "acquired" };
+  }
+  if (error.code === UNIQUE_VIOLATION) {
+    return { kind: "busy" };
+  }
+  return { kind: "failed", detail: error.message };
+}
+
+async function releaseLock(supabase: QueryClient, userId: string): Promise<void> {
+  const { error } = await supabase.from("generation_lock").delete().eq("user_id", userId);
+  if (error !== null) {
+    console.error(`Could not release the generation lock: ${error.message}`);
+  }
 }
 
 export async function POST(request: Request) {
@@ -64,7 +111,7 @@ export async function POST(request: Request) {
   }
   const key = idempotencyKey.value;
 
-  let supabase: Awaited<ReturnType<typeof supabaseServer>>;
+  let supabase: QueryClient;
   try {
     supabase = await supabaseServer();
   } catch (error) {
@@ -123,6 +170,31 @@ export async function POST(request: Request) {
     return fail("You have reached your monthly generation limit.", 429);
   }
 
+  const lock = await acquireLock(supabase, user.id);
+  if (lock.kind === "busy") {
+    return fail(LOCK_BUSY, 429);
+  }
+  if (lock.kind === "failed") {
+    console.error(`Could not acquire the generation lock: ${lock.detail}`);
+    return fail(LOCK_FAILED, 500);
+  }
+
+  try {
+    return await generateDraft({
+      supabase,
+      userId: user.id,
+      profile: profile.value,
+      input,
+      key,
+    });
+  } finally {
+    await releaseLock(supabase, user.id);
+  }
+}
+
+async function generateDraft(deps: GenerateDraftDeps): Promise<NextResponse> {
+  const { supabase, userId, profile, input, key } = deps;
+
   const { data: templateRows, error: templateError } = await supabase
     .from("prompt_template")
     .select("*")
@@ -141,11 +213,11 @@ export async function POST(request: Request) {
   }
   const template = problems.length === 0 ? stored : null;
 
-  const system = buildSystemPrompt(profile.value);
+  const system = buildSystemPrompt(profile);
   if (!system.ok) {
     return fail(system.error, 400);
   }
-  const userPrompt = buildUserPrompt({ ...input, profile: profile.value }, template);
+  const userPrompt = buildUserPrompt({ ...input, profile }, template);
   if (!userPrompt.ok) {
     return fail(userPrompt.error, 400);
   }
@@ -188,7 +260,7 @@ export async function POST(request: Request) {
     contentText: text,
     contentType: input.contentType,
     keywords: input.keywords,
-    brandTone: profile.value.brandTone,
+    brandTone: profile.brandTone,
     rating: null,
   });
   if (!evaluation.ok) {
@@ -198,7 +270,7 @@ export async function POST(request: Request) {
   const { data: saved, error: saveError } = await supabase
     .from("generated_content")
     .insert({
-      user_id: user.id,
+      user_id: userId,
       content_type: input.contentType,
       topic: input.topic,
       keywords: input.keywords,
@@ -219,7 +291,7 @@ export async function POST(request: Request) {
       const { data: existing } = await supabase
         .from("generated_content")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("idempotency_key", key)
         .maybeSingle();
       const replay = existing === null ? null : parseDraft(existing);

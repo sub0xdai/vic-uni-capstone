@@ -74,10 +74,16 @@ create unique index prompt_template_one_active_idx
   on prompt_template (content_type)
   where is_active;
 
+create table generation_lock (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  acquired_at timestamptz not null default now()
+);
+
 alter table business_profile enable row level security;
 alter table generated_content enable row level security;
 alter table model_rate enable row level security;
 alter table prompt_template enable row level security;
+alter table generation_lock enable row level security;
 
 create policy business_profile_select on business_profile
   for select using (auth.uid() = user_id);
@@ -103,6 +109,13 @@ create policy model_rate_select on model_rate
 create policy prompt_template_select on prompt_template
   for select to authenticated using (true);
 
+create policy generation_lock_select on generation_lock
+  for select using (auth.uid() = user_id);
+create policy generation_lock_insert on generation_lock
+  for insert with check (auth.uid() = user_id);
+create policy generation_lock_delete on generation_lock
+  for delete using (auth.uid() = user_id);
+
 create or replace function touch_updated_at() returns trigger
 language plpgsql as $$
 begin
@@ -123,3 +136,4 @@ grant select, insert, update, delete on business_profile to authenticated;
 grant select, insert, update, delete on generated_content to authenticated;
 grant select on model_rate to anon, authenticated;
 grant select on prompt_template to authenticated;
+grant select, insert, delete on generation_lock to authenticated;
