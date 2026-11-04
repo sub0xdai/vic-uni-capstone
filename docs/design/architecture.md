@@ -212,6 +212,22 @@ The full prompt text is stored rather than a hash, because the evaluation work n
 This follows from the principle that a result that cannot be reproduced cannot be defended.
 The cost is four columns now against a migration later.
 
+### 3.13 The score lives with the metrics that produce it
+
+Section 2.7 of the proposal lists a `Quality_Score` column beside the `Analysis_JSON` it is derived from.
+The build has no such column. The score is stored inside `analysis` as `overallScore`.
+
+A stored score and the five metrics behind it are two records of one fact, and the database cannot keep them agreeing.
+A write that updates one and not the other leaves a draft whose headline number contradicts its own report, and the dashboard reads the headline.
+Storing the score with its inputs makes that state unrepresentable rather than unlikely.
+
+The same rule is enforced in code at both ends.
+`assertQualityReport` refuses a report whose `overallScore` disagrees with its weighted metrics, so the write never happens.
+`parseQualityReport` applies the same check on the way back in, so a hand-edited row is rejected rather than displayed.
+
+The cost is on the read side: a SQL query for the score has to read `analysis->>'overallScore'` and cast it.
+That is a convenience given up in exchange for a guarantee, and this design takes the guarantee.
+
 ## 4. Rejected approaches
 
 Recorded so the decision is visible as a decision rather than an omission.
