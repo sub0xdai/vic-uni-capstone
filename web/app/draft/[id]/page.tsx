@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DraftEditor } from "@/components/draft-editor";
+import { PromptPanel } from "@/components/prompt-panel";
 import { QualityCard } from "@/components/quality-card";
 import { Button, Card } from "@/components/ui";
 import { planDraftSave } from "@/lib/draft-save";
@@ -270,6 +271,13 @@ export default function DraftPage() {
           <QualityCard report={draft.analysis} />
         </Card>
       </div>
+
+      <Card
+        title="How this draft was made"
+        subtitle="The exact prompt text stored with the draft, and the version that produced it."
+      >
+        <PromptPanel parameters={draft.parameters} />
+      </Card>
 
       <Link
         href="/dashboard"

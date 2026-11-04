@@ -24,7 +24,7 @@ The remaining routes need a Supabase project and a Gemini key, described in the 
 | `/onboarding` | Create or edit the business profile |
 | `/generate` | Pick a content type, enter a topic and keywords, generate, edit, copy, rate. Reuse a saved draft to start with its inputs |
 | `/dashboard` | Draft list with a status filter and counts, star ratings, mark ready and discard, the monthly usage and the latest quality score |
-| `/draft/[id]` | One saved draft: the text with its live budget, its quality report, mark ready, discard, edit and rate |
+| `/draft/[id]` | One saved draft: the text with its live budget, its quality report, the prompt that produced it, mark ready, discard, edit and rate |
 | `/preview` | Every component with fake data, no database and no login |
 | `/api/generate` | The only server route. Generates through the provider port, scores the draft and saves it |
 

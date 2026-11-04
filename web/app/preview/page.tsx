@@ -8,6 +8,7 @@ import {
 } from "@/lib/types";
 import { GeneratorPanel } from "@/components/generator-panel";
 import { ProfileForm } from "@/components/profile-form";
+import { PromptPanel } from "@/components/prompt-panel";
 import { Button, Card, Field, Stars, controlClass, controlErrorClass } from "@/components/ui";
 import type {
   BusinessProfile,
@@ -220,6 +221,13 @@ export default function PreviewPage() {
           />
         </Card>
       </div>
+
+      <Card
+        title="P1.1 How the draft was made"
+        subtitle="The prompt text stored with a draft, and the version that produced it."
+      >
+        <PromptPanel parameters={DRAFT.parameters} />
+      </Card>
     </main>
   );
 }
