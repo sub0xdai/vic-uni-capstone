@@ -23,7 +23,7 @@ The remaining routes need a Supabase project and a Gemini key, described in the 
 | `/login` | Sign in, or create an account |
 | `/onboarding` | Create or edit the business profile |
 | `/generate` | Pick a content type, enter a topic and keywords, generate, edit, copy, rate |
-| `/dashboard` | Draft list with star ratings, publish and discard, the monthly usage and the latest quality score |
+| `/dashboard` | Draft list with a status filter and counts, star ratings, mark ready and discard, the monthly usage and the latest quality score |
 | `/preview` | Every component with fake data, no database and no login |
 | `/api/generate` | The only server route. Generates through the provider port, scores the draft and saves it |
 

@@ -15,10 +15,12 @@ import {
   MONTHLY_LIMIT,
   err,
   ok,
+  statusCounts,
   type Draft,
   type DraftStatus,
   type ModelRate,
   type Result,
+  type StatusFilter,
 } from "@/lib/types";
 
 const NOT_SIGNED_IN = "You must be logged in to see your dashboard";
@@ -78,6 +80,7 @@ function Tile({
 
 export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const [rates, setRates] = useState<ModelRate[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -252,6 +255,8 @@ export default function DashboardPage() {
   const limitReached = usedThisMonth >= MONTHLY_LIMIT;
   const favourites = favouriteDrafts(drafts);
   const spend = monthlySpend(drafts, rates, now);
+  const counts = statusCounts(drafts);
+  const visible = filter === "all" ? drafts : drafts.filter((draft) => draft.status === filter);
   const costLine =
     spend.cost === null
       ? "No rate on record for this model."
@@ -340,7 +345,10 @@ export default function DashboardPage() {
 
       <Card title="Generated content" subtitle="Newest first.">
         <DraftList
-          drafts={drafts}
+          drafts={visible}
+          filter={filter}
+          counts={counts}
+          onFilter={setFilter}
           onDelete={remove}
           onRate={rate}
           onStatus={changeStatus}

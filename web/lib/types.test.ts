@@ -11,7 +11,40 @@ import {
   parseContentType,
   parseGenerationRequest,
   parseRating,
+  statusCounts,
+  type Draft,
 } from "./types.ts";
+
+test("status counts add up to the drafts they count", () => {
+  const base: Draft = {
+    id: "d1",
+    userId: "u1",
+    contentType: "social_caption",
+    topic: "t",
+    keywords: [],
+    contentText: "text",
+    rating: null,
+    status: "draft",
+    statusChangedAt: null,
+    analysis: null,
+    parameters: null,
+    usage: null,
+    createdAt: "2026-11-05T09:00:00.000Z",
+  };
+  const drafts: Draft[] = [
+    base,
+    { ...base, id: "d2", status: "published" },
+    { ...base, id: "d3", status: "discarded" },
+    { ...base, id: "d4", status: "published" },
+  ];
+  const counts = statusCounts(drafts);
+  assert.equal(counts.all, 4);
+  assert.equal(counts.draft, 1);
+  assert.equal(counts.published, 2);
+  assert.equal(counts.discarded, 1);
+  assert.equal(counts.draft + counts.published + counts.discarded, counts.all);
+  assert.deepEqual(statusCounts([]), { all: 0, draft: 0, published: 0, discarded: 0 });
+});
 
 test("accepts every declared content type", () => {
   for (const value of CONTENT_TYPES) {

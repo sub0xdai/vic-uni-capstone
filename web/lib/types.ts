@@ -14,6 +14,8 @@ export const DRAFT_STATUSES = ["draft", "published", "discarded"] as const;
 
 export type DraftStatus = (typeof DRAFT_STATUSES)[number];
 
+export type StatusFilter = "all" | DraftStatus;
+
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   blog_outline: "Blog outline",
   social_caption: "Social media caption",
@@ -28,7 +30,7 @@ export const BRAND_TONE_LABELS: Record<BrandTone, string> = {
 
 export const DRAFT_STATUS_LABELS: Record<DraftStatus, string> = {
   draft: "Draft",
-  published: "Published",
+  published: "Ready",
   discarded: "Discarded",
 };
 
@@ -140,6 +142,19 @@ export function isBrandTone(value: unknown): value is BrandTone {
 
 export function isDraftStatus(value: unknown): value is DraftStatus {
   return typeof value === "string" && (DRAFT_STATUSES as readonly string[]).includes(value);
+}
+
+export function statusCounts(drafts: readonly Draft[]): Record<StatusFilter, number> {
+  const counts: Record<StatusFilter, number> = {
+    all: drafts.length,
+    draft: 0,
+    published: 0,
+    discarded: 0,
+  };
+  for (const draft of drafts) {
+    counts[draft.status] += 1;
+  }
+  return counts;
 }
 
 export function isRating(value: unknown): value is number {

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { DraftEditor } from "@/components/draft-editor";
 import { DraftList } from "@/components/draft-list";
+import {
+  statusCounts,
+} from "@/lib/types";
 import { GeneratorPanel } from "@/components/generator-panel";
 import { ProfileForm } from "@/components/profile-form";
 import { Button, Card, Field, Stars, controlClass, controlErrorClass } from "@/components/ui";
@@ -11,6 +14,7 @@ import type {
   ContentType,
   Draft,
   QualityReport,
+  StatusFilter,
 } from "@/lib/types";
 
 const PROFILE: BusinessProfile = {
@@ -59,7 +63,30 @@ const DRAFT: Draft = {
   createdAt: new Date("2026-10-02T09:00:00Z").toISOString(),
 };
 
+const PREVIEW_DRAFTS: Draft[] = [
+  DRAFT,
+  {
+    ...DRAFT,
+    id: "00000000-0000-0000-0000-000000000004",
+    contentType: "email_newsletter",
+    topic: "October roast club email",
+    rating: null,
+    status: "published",
+    statusChangedAt: new Date("2026-10-03T10:00:00Z").toISOString(),
+    analysis: null,
+  },
+  {
+    ...DRAFT,
+    id: "00000000-0000-0000-0000-000000000005",
+    topic: "Winter hours announcement",
+    rating: 2,
+    status: "discarded",
+    statusChangedAt: new Date("2026-10-04T10:00:00Z").toISOString(),
+  },
+];
+
 export default function PreviewPage() {
+  const [draftFilter, setDraftFilter] = useState<StatusFilter>("all");
   const [generator, setGenerator] = useState<{
     contentType: ContentType;
     topic: string;
@@ -150,22 +177,17 @@ export default function PreviewPage() {
 
         <Card
           title="W3.3 Dashboard draft list"
-          subtitle="Owner B. Rows plus publish, discard, delete and an empty state."
+          subtitle="Owner B. Status filter with counts, mark ready, discard, delete, empty states."
         >
           <DraftList
-            drafts={[
-              DRAFT,
-              {
-                ...DRAFT,
-                id: "00000000-0000-0000-0000-000000000004",
-                contentType: "email_newsletter",
-                topic: "October roast club email",
-                rating: null,
-                status: "published",
-                statusChangedAt: new Date("2026-10-03T10:00:00Z").toISOString(),
-                analysis: null,
-              },
-            ]}
+            drafts={
+              draftFilter === "all"
+                ? PREVIEW_DRAFTS
+                : PREVIEW_DRAFTS.filter((draft) => draft.status === draftFilter)
+            }
+            filter={draftFilter}
+            counts={statusCounts(PREVIEW_DRAFTS)}
+            onFilter={setDraftFilter}
             onDelete={() => {}}
             onRate={() => {}}
             onStatus={() => {}}
