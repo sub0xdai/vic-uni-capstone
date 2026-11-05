@@ -5,6 +5,7 @@ For each piece of work: what I meant to do, what I actually did, how I know it w
 "How I know" means a commit hash, a file, or a command I can run again. Not memory.
 I write down the reason for a decision too, because the reason is what I will have forgotten by November.
 Entries get added when something finishes, even if that is late.
+The submitted record is the progress report, and this journal is the working detail behind it, kept because the report can only carry a summary.
 
 ## Where things stand, 4 November 2026
 
