@@ -43,3 +43,38 @@ test("tenancy is enforced on insert", () => {
   const guards = SQL.match(/with check \(auth\.uid\(\) = user_id\)/g) ?? [];
   assert.ok(guards.length >= 4, `expected insert and update guards, found ${guards.length}`);
 });
+
+test("model_rate is readable by clients and writable by nobody", () => {
+  assert.match(SQL, /alter table model_rate enable row level security/);
+  assert.match(
+    SQL,
+    /create policy model_rate_select on model_rate\s+for select to anon, authenticated\s+using/,
+  );
+  assert.match(SQL, /grant select on model_rate to anon, authenticated/);
+  assert.doesNotMatch(SQL, /grant all on all tables|alter default privileges/);
+});
+
+test("prompt_template is readable by signed in clients and writable by nobody", () => {
+  assert.match(SQL, /alter table prompt_template enable row level security/);
+  assert.match(
+    SQL,
+    /create policy prompt_template_select on prompt_template\s+for select to authenticated\s+using/,
+  );
+  assert.match(SQL, /grant select on prompt_template to authenticated/);
+  assert.doesNotMatch(SQL, /grant (insert|update|delete)[^;]*prompt_template/);
+});
+
+test("a draft records the prompt version that produced it", () => {
+  assert.match(SQL, /prompt_version text/);
+});
+
+test("only one template per content type can be active", () => {
+  assert.match(SQL, /create unique index prompt_template_one_active_idx[^;]*where is_active/);
+});
+
+test("a user can hold exactly one generation lock", () => {
+  assert.match(SQL, /create table generation_lock \(\s*user_id uuid primary key/);
+  assert.match(SQL, /alter table generation_lock enable row level security/);
+  assert.match(SQL, /grant select, insert, delete on generation_lock to authenticated/);
+  assert.doesNotMatch(SQL, /grant [^;]*update[^;]*generation_lock/);
+});

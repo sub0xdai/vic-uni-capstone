@@ -103,3 +103,16 @@ lsof -ti:3000 | xargs kill
 Put their name on the commit that carries their code.
 Pull request #54 became commits on the main branch, and the commit with the four screens is authored by Semir, the person who wrote them.
 Do the same when you build on top of someone else's branch.
+
+## Merging
+
+`master` is protected.
+A direct push is rejected for everyone except the repository owner, who keeps an admin bypass.
+
+1. Branch off the latest master, named after the card, such as `W2.4-profile-route`.
+2. Touch only the files your card names.
+3. Run `pnpm check` and open a pull request.
+4. Someone else approves it, then it is squash merged, so the history reads as one card per commit.
+
+The bypass exists so the owner's own cards do not wait for an approval from someone who cannot review the change.
+Everyone else needs one approval.

@@ -1,12 +1,16 @@
+import { structureReasons } from "@/lib/evaluate";
 import {
   QUALITY_METRICS,
   QUALITY_THRESHOLD,
+  type ContentType,
   type QualityMetric,
   type QualityReport,
 } from "@/lib/types";
 
 export type QualityCardProps = {
   report: QualityReport | null;
+  contentType: ContentType;
+  text: string;
 };
 
 const LABELS: Record<QualityMetric, string> = {
@@ -17,13 +21,14 @@ const LABELS: Record<QualityMetric, string> = {
   userSatisfactionScore: "User satisfaction",
 };
 
-export function QualityCard({ report }: QualityCardProps) {
+export function QualityCard({ report, contentType, text }: QualityCardProps) {
   if (report === null) {
     return <p className="text-sm text-neutral-500">Not scored yet.</p>;
   }
 
   const overall = Math.round(report.overallScore * 100);
   const below = report.overallScore < QUALITY_THRESHOLD;
+  const reasons = structureReasons(text, contentType);
 
   return (
     <div>
@@ -50,6 +55,15 @@ export function QualityCard({ report }: QualityCardProps) {
                   style={{ width: `${value}%` }}
                 />
               </div>
+              {metric === "structureScore" && reasons.length > 0 ? (
+                <ul className="mt-1.5 space-y-0.5">
+                  {reasons.map((reason) => (
+                    <li key={reason} className="text-[11px] text-amber-700">
+                      {`- ${reason}`}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           );
         })}

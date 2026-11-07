@@ -86,7 +86,30 @@ proposal feedback.
 **Service Fallback:** The system will fall back to GPT-3.5 Turbo when
 the latency of GPT-4 is beyond the performance requirement of 15-45
 seconds.
+This plan was written against OpenAI.
+The build moved to Gemini behind a provider port, so the fallback is now a configuration change rather than a second integration, and no second model is configured today.
 
 **Database Redundancy:** The team will deploy a PostgreSQL instance when
 there is a downtime of Supabase (Task 2.1.2) to continue the development
 of the Rating System Logic.
+
+### 10.5 Task dependencies
+
+The three charts above carry owners and dates but no arrows.
+This table is the dependency list the charts cannot show, so a reader can see what actually blocks what.
+
+| Task | Depends on | Why |
+|---|---|---|
+| Business profile form | Auth screens | A profile belongs to a signed-in user |
+| Generation route | Profile form, database schema | It reads the profile and writes a row |
+| Evaluation module | Generator port | It scores the text the port returns |
+| Rating persistence | Evaluation module | A rating recomputes the stored report, which only exists once the module does |
+| Dashboard draft list | Generation route | There is nothing to list until drafts exist |
+| Draft detail page | Dashboard list, evaluation module | It is opened from a row and shows the stored report |
+| Prompt templates as data | Evaluation module | The route lints a stored body against the structures the scorer checks |
+| Evaluation experiment | Draft detail page, real drafts, external raters | It needs drafts to rate and people to rate them |
+| Load test | Deployment | There is no URL to test until the app is deployed |
+| Deployment | Owner credentials, a domain | Neither is in the repository |
+
+The critical path runs through deployment, not through features.
+Everything above it can be built and checked locally; the deployment gate is the one that needs somebody else to act.

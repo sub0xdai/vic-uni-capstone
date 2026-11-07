@@ -1,23 +1,61 @@
 import { NextResponse } from "next/server";
-import { MissingEnvError, optionalEnv } from "@/lib/env";
+import { InvariantError } from "@/lib/assert";
+import { MissingEnvError } from "@/lib/env";
 import { evaluateDraft } from "@/lib/evaluate";
 import {
-  GEMINI_DEFAULT_MODEL,
-  GEMINI_TEMPERATURE,
-  extractGeminiText,
-  geminiBody,
-  geminiUrl,
-} from "@/lib/gemini";
-import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
+  GENERATION_TEMPERATURE,
+  generatorFromEnv,
+  type ContentGenerator,
+} from "@/lib/generator";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  promptVersionLabel,
+  resolveTemplate,
+  templateProblems,
+} from "@/lib/prompts";
 import { parseBusinessProfile, parseDraft } from "@/lib/rows";
 import { parseIdempotencyKey } from "@/lib/idempotency";
 import { supabaseServer } from "@/lib/supabase/server";
-import { MONTHLY_LIMIT, parseGenerationRequest } from "@/lib/types";
+import {
+  MONTHLY_LIMIT,
+  parseGenerationRequest,
+  type BusinessProfile,
+  type GenerationFailure,
+  type GenerationRequest,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const AI_FAILED = "The AI service could not generate content. Please try again.";
+const AI_NO_RESPONSE = "The AI service did not respond. Please try again.";
+const AI_NOT_SET_UP = "The AI service is not set up yet.";
+const LOCK_BUSY = "A generation is already running. Wait for it to finish.";
+const LOCK_FAILED = "The generation could not start. Please try again.";
 const UNIQUE_VIOLATION = "23505";
+const LOCK_TTL_MS = 90_000;
+
+const FAILURES: Record<GenerationFailure["kind"], { status: number; message: string }> = {
+  timeout: { status: 504, message: AI_NO_RESPONSE },
+  unreachable: { status: 504, message: AI_NO_RESPONSE },
+  upstream: { status: 502, message: AI_FAILED },
+  unusable: { status: 502, message: AI_FAILED },
+};
+
+type QueryClient = Awaited<ReturnType<typeof supabaseServer>>;
+
+type LockResult =
+  | { kind: "acquired" }
+  | { kind: "busy" }
+  | { kind: "failed"; detail: string };
+
+type GenerateDraftDeps = {
+  supabase: QueryClient;
+  userId: string;
+  profile: BusinessProfile;
+  input: GenerationRequest;
+  key: string | null;
+};
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -25,6 +63,33 @@ function fail(message: string, status: number) {
 
 function startOfMonthUtc(now: Date): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+async function acquireLock(supabase: QueryClient, userId: string): Promise<LockResult> {
+  const staleBefore = new Date(Date.now() - LOCK_TTL_MS).toISOString();
+  const { error: clearError } = await supabase
+    .from("generation_lock")
+    .delete()
+    .eq("user_id", userId)
+    .lt("acquired_at", staleBefore);
+  if (clearError !== null) {
+    console.error(`Could not clear a stale generation lock: ${clearError.message}`);
+  }
+  const { error } = await supabase.from("generation_lock").insert({ user_id: userId });
+  if (error === null) {
+    return { kind: "acquired" };
+  }
+  if (error.code === UNIQUE_VIOLATION) {
+    return { kind: "busy" };
+  }
+  return { kind: "failed", detail: error.message };
+}
+
+async function releaseLock(supabase: QueryClient, userId: string): Promise<void> {
+  const { error } = await supabase.from("generation_lock").delete().eq("user_id", userId);
+  if (error !== null) {
+    console.error(`Could not release the generation lock: ${error.message}`);
+  }
 }
 
 export async function POST(request: Request) {
@@ -46,7 +111,7 @@ export async function POST(request: Request) {
   }
   const key = idempotencyKey.value;
 
-  let supabase: Awaited<ReturnType<typeof supabaseServer>>;
+  let supabase: QueryClient;
   try {
     supabase = await supabaseServer();
   } catch (error) {
@@ -105,50 +170,97 @@ export async function POST(request: Request) {
     return fail("You have reached your monthly generation limit.", 429);
   }
 
-  const system = buildSystemPrompt(profile.value);
+  const lock = await acquireLock(supabase, user.id);
+  if (lock.kind === "busy") {
+    return fail(LOCK_BUSY, 429);
+  }
+  if (lock.kind === "failed") {
+    console.error(`Could not acquire the generation lock: ${lock.detail}`);
+    return fail(LOCK_FAILED, 500);
+  }
+
+  try {
+    return await generateDraft({
+      supabase,
+      userId: user.id,
+      profile: profile.value,
+      input,
+      key,
+    });
+  } finally {
+    await releaseLock(supabase, user.id);
+  }
+}
+
+async function generateDraft(deps: GenerateDraftDeps): Promise<NextResponse> {
+  const { supabase, userId, profile, input, key } = deps;
+
+  const { data: templateRows, error: templateError } = await supabase
+    .from("prompt_template")
+    .select("*")
+    .eq("content_type", input.contentType)
+    .eq("is_active", true);
+  if (templateError !== null) {
+    console.error(`Prompt templates could not be read: ${templateError.message}`);
+  }
+  const stored = resolveTemplate(templateRows ?? [], input.contentType);
+  const problems = stored === null ? [] : templateProblems(stored);
+  if (stored !== null && problems.length > 0) {
+    console.error(
+      `Prompt template ${stored.version} for ${input.contentType} is missing`,
+      problems.join(", "),
+    );
+  }
+  const template = problems.length === 0 ? stored : null;
+
+  const system = buildSystemPrompt(profile);
   if (!system.ok) {
     return fail(system.error, 400);
   }
-  const userPrompt = buildUserPrompt({ ...input, profile: profile.value });
+  const userPrompt = buildUserPrompt({ ...input, profile }, template);
   if (!userPrompt.ok) {
     return fail(userPrompt.error, 400);
   }
 
-  const apiKey = optionalEnv("GEMINI_API_KEY");
-  if (apiKey === null) {
-    console.error("GEMINI_API_KEY is not set");
-    return fail("The AI service is not set up yet.", 500);
-  }
-  const model = optionalEnv("GEMINI_MODEL") ?? GEMINI_DEFAULT_MODEL;
-
-  let text: string;
+  let generator: ContentGenerator;
   try {
-    const response = await fetch(geminiUrl(model), {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(geminiBody(system.value, userPrompt.value, GEMINI_TEMPERATURE)),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      console.error(`Gemini request failed with status ${response.status}`);
-      return fail(AI_FAILED, 502);
-    }
-    const extracted = extractGeminiText(await response.json());
-    if (!extracted.ok) {
-      console.error(`Gemini response was not usable: ${extracted.error}`);
-      return fail(AI_FAILED, 502);
-    }
-    text = extracted.value;
+    generator = generatorFromEnv();
   } catch (error) {
-    console.error("Gemini request error:", error instanceof Error ? error.name : "unknown");
-    return fail("The AI service did not respond. Please try again.", 504);
+    if (error instanceof MissingEnvError) {
+      console.error(`The AI service is not configured: ${error.variable} is not set`);
+      return fail(AI_NOT_SET_UP, 500);
+    }
+    if (error instanceof InvariantError) {
+      console.error(`The AI service is misconfigured: ${error.detail}`);
+      return fail(AI_NOT_SET_UP, 500);
+    }
+    throw error;
   }
+
+  const generated = await generator.generate({
+    systemPrompt: system.value,
+    userPrompt: userPrompt.value,
+    temperature: GENERATION_TEMPERATURE,
+  });
+  if (!generated.ok) {
+    const failure = generated.error;
+    const route = FAILURES[failure.kind];
+    console.error(
+      `Generation failed via ${generator.provider} ${generator.model}: ${failure.kind}`,
+    );
+    if (failure.kind === "upstream") {
+      console.error(`Upstream answered with status ${failure.status}`);
+    }
+    return fail(route.message, route.status);
+  }
+  const output = generated.value;
+  const text = output.text;
 
   const evaluation = evaluateDraft({
     contentText: text,
     contentType: input.contentType,
     keywords: input.keywords,
-    brandTone: profile.value.brandTone,
+    brandTone: profile.brandTone,
     rating: null,
   });
   if (!evaluation.ok) {
@@ -158,16 +270,18 @@ export async function POST(request: Request) {
   const { data: saved, error: saveError } = await supabase
     .from("generated_content")
     .insert({
-      user_id: user.id,
+      user_id: userId,
       content_type: input.contentType,
       topic: input.topic,
       keywords: input.keywords,
       content_text: text,
-      model,
-      temperature: GEMINI_TEMPERATURE,
+      model: generator.model,
+      temperature: GENERATION_TEMPERATURE,
       system_prompt: system.value,
       user_prompt: userPrompt.value,
+      prompt_version: promptVersionLabel(template),
       analysis: evaluation.ok ? evaluation.value : null,
+      usage: output.usage,
       idempotency_key: key,
     })
     .select("*")
@@ -177,7 +291,7 @@ export async function POST(request: Request) {
       const { data: existing } = await supabase
         .from("generated_content")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("idempotency_key", key)
         .maybeSingle();
       const replay = existing === null ? null : parseDraft(existing);

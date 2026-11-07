@@ -1,29 +1,38 @@
-# vic-uni-capstone
+# ContentCraft
 
-Capstone project for NIT3003 at Victoria University.
-The project is ContentCraft, a web app that writes marketing copy for small businesses from a brand profile the owner fills in.
+ContentCraft writes marketing copy for a small business.
 
-The unit runs in two parts. NIT3003 covers the proposal and the design.
-The build has to be mostly finished before the second unit starts, because that unit opens with a demonstration and marks the progress diary kept in between.
-That demonstration has passed. The remaining work is depth, not scaffolding.
+The owner fills in a brand profile once - business name, industry, audience and tone - then asks for a blog outline, a social caption or an email newsletter.
+Each draft comes back scored on five measures, so the owner can see what is weak before they publish it.
 
-## Layout
+![The generate screen, from the design the build follows](docs/assets/media/image3.png)
 
-```
-docs/          proposal, design and the plan
-  sections/    14 markdown files, one per numbered section
-  design/      architecture decisions and the reasoning behind them
-  plan/        build plan, board cards, review notes, working agreements
-  diary/       the assessed progress diary, one folder per person
-  build/       pulls the markdown back out of a docx
-  assets/      images the proposal references
-web/           the application
-Makefile       proposal build
-```
+Capstone project for NIT3003 and NIT3004 at Victoria University.
+The proposal and the design are written and marked.
+The application is built and runs against a live database.
+There is no public deployment yet.
 
-## Running the app
+## What it does
 
-You need Node 20.9 or newer and pnpm.
+- A brand profile per business, with one account kept apart from every other by the database.
+- Three content types: blog outline, social media caption and email newsletter.
+- Generation through Gemini, capped at twenty drafts a month, with one generation at a time per account.
+- An editor with copy, a star rating, and mark ready or discard.
+- A quality report on every draft: readability, tone, keyword coverage, structure and the owner's satisfaction, weighted into one score, with the reason behind each failed check.
+- A monthly usage figure and an estimated cost, priced from a table rather than a number in the code.
+
+## Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Application | Next.js 16, React 19, TypeScript, Tailwind 4 | one deployable, server rendering by default |
+| Data and login | Supabase: Postgres, auth, row level security | tenancy enforced by the database instead of by every query |
+| Generation | Gemini, behind a provider port | the vendor is configuration, and the build has already outlived one |
+| Command line tools | Go, standard library only | the evaluation and tenancy probes are small and need no dependencies |
+
+## Run it
+
+Node 20.9 or newer, and pnpm.
 
 ```bash
 cd web
@@ -33,101 +42,50 @@ pnpm dev
 ```
 
 `http://localhost:3000/preview` renders every component with fake data.
-That page needs no database, no API keys and no login, so most component work happens there.
-It is also the workbench: if a change is not visible on `/preview`, nobody can review it.
+It needs no database, no keys and no login, so it is the fastest way to see the interface.
 
-The other routes need a real backend:
-
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for login, the profile and the dashboard.
-- `GEMINI_API_KEY` for the generation endpoint, which defaults to `gemini-3.5-flash-lite` and takes `GEMINI_MODEL` to change that.
-
-Without them the app still boots and `/preview` still works.
-The generation endpoint answers with a plain sentence instead of a stack trace.
+Every other route needs a Supabase project and a Gemini key.
+`web/README.md` lists each variable and what happens without it.
 
 ## Checks
 
 ```bash
-cd web
-pnpm check    # typecheck, lint, tests
-pnpm build    # production build
+cd web && pnpm check
+cd tools/evaluation && go test ./...
+cd tools/tenancy && go test ./...
 ```
 
-`pnpm check` has to pass before anyone reviews your pull request.
+`pnpm check` runs the type check, the lint and the test suite.
+There is no CI, so it runs on the machine before a pull request.
 
-There is no CI. The check runs on your machine, so run it before you push.
-A pull request that does not pass it will not be merged.
+## Where everything else lives
 
-## Database
-
-The schema is `web/supabase/schema.sql`.
-Paste the whole file into the Supabase SQL editor and run it.
-
-It creates two tables, enables row level security, adds the policies that keep one tenant from reading another tenant's rows, and grants the roles Supabase expects.
-Without the grants a fresh project answers `permission denied` on the first query.
-
-To confirm the tenancy rules hold, create two users, give each one a business profile, then read profiles while signed in as the first user.
-You should get one row back.
-Two rows means the row-level security policies are wrong.
-
-## How changes land
-
-`master` is protected. Direct pushes are rejected.
-
-1. Branch off the latest `master`, named after the card, such as `W2.4-profile-route`.
-2. One card per branch. Touch only the files your card names.
-3. Run `pnpm check` and open a pull request.
-4. Someone else approves it, then it is squash merged, so history reads as one card per commit.
-
-The repository owner keeps an admin bypass, so their own cards merge without waiting.
-Everyone else needs one approval.
-
-## What the app does today
-
-- Sign up, log in, log out, with the session guarded by `web/proxy.ts`.
-- A business profile: name, industry, description, audience and brand tone.
-- Three content types: blog outline, social caption, email newsletter.
-- Generation through Gemini, limited to 20 drafts a month counted in UTC.
-- Draft editing, copy, star ratings, delete, publish and discard, and a dashboard with the monthly usage.
-- A quality report per draft, stored with it and shown on the dashboard.
-
-The quality report is computed locally in `web/lib/evaluate.ts`.
-Readability comes from a reading-ease formula, keywords from coverage, structure from per-type checks, tone from a word-marker heuristic, and satisfaction from the star rating.
-`web/lib/score.ts` holds the weights and the 0.6 threshold, and rejects a report whose overall score does not match its metrics.
-The tone metric is a heuristic, not a judgment about voice. Replacing it is the open evaluation work.
-
-## Building the proposal
-
-```bash
-make docx
-```
-
-This writes `docs/dist/project_proposal_complete.docx`.
-Sources are the markdown files in `docs/sections/`, concatenated in filename order.
-Word styling comes from the original submitted docx, which pandoc uses as a reference document, so the output keeps the format that was marked.
-
-Edit the markdown.
-The docx is a build output and rebuilding overwrites it.
-
-`make extract` goes the other way and rebuilds the markdown from a docx.
-You only need it if someone edits the Word file directly.
-
-## Start here
-
-- `docs/plan/build-plan.md` covers who is doing what, what counts as done, and the card briefs
-- `docs/design/architecture.md` covers the design decisions and the ones that were rejected
-- `docs/plan/working-agreements.md` covers how to work on a card without breaking anyone else
-- `docs/important_info.md` is the unit brief
+| Path | What is there |
+|---|---|
+| `web/` | the application, with its own README covering routes, variables and the database |
+| `docs/sections/` | the proposal, fourteen numbered sections, rebuilt with `make docx` |
+| `docs/design/` | the architecture, the evaluation experiment and the answer to the instructor's feedback |
+| `docs/plan/` | the board, the card briefs, the working agreements and the tenancy check |
+| `docs/diary/` | the progress diary, one folder per person |
+| `tools/evaluation/` | the Go program behind the evaluation experiment |
+| `tools/tenancy/` | the Go probe that proves the isolation rules on any project |
+| `scrub.py`, `.githooks/` | the pre-commit scan for secrets and personal data |
 
 ## Status
 
-The proposal and design are written and marked.
+Working: accounts and login, the brand profile, generation for all three content types, the editor, the dashboard, the quality score and the monthly cost.
 
-The application is built and merged: accounts, the brand profile, generation for all three content types, the editor, and the dashboard.
+The database exists with the schema applied, and the isolation rules were verified on the live project with two accounts: an unfiltered read returns one row each, nothing comes back without a token, a cross-tenant insert is refused with 403, and a cross-tenant update changes nothing.
+`docs/plan/tenancy-check.md` records the run and what it did not cover.
 
-Still open, and tracked in `docs/plan/build-plan.md`:
+Still open, tracked in `docs/plan/build-plan.md`:
 
-- A live Supabase project with the schema applied, and the two-user isolation check run against it. Nothing has been exercised end to end without it.
-- A deployment. There is no public URL yet.
-- An API key for generation on the deployed build.
-- The evaluation experiment: human ratings against the computed scores, and an agreement statistic.
-- A load test against the non functional requirements.
+- A deployment. There is no public URL yet, so nothing in this repository is proven end to end on a public host.
+- An API key for generation on a deployed build.
+- The evaluation experiment: drafts rated by people outside the build, and an agreement statistic against the computed score.
+- A load test against the non-functional requirements, seven of which are honestly unmeasured.
+
+## Ownership
+
+Coursework for NIT3003 and NIT3004 at Victoria University, by Hailu Tesfaye Seyoum, Jamal Hussein, Semir Abdu and Daniel Palazzolo.
+No licence is granted; this is submitted coursework, not a product released for reuse.

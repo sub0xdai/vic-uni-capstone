@@ -3,14 +3,20 @@
 import { useState } from "react";
 import { DraftEditor } from "@/components/draft-editor";
 import { DraftList } from "@/components/draft-list";
+import { DraftPreview } from "@/components/draft-preview";
+import { QualityCard } from "@/components/quality-card";
+import { evaluateDraft } from "@/lib/evaluate";
+import { statusCounts } from "@/lib/types";
 import { GeneratorPanel } from "@/components/generator-panel";
 import { ProfileForm } from "@/components/profile-form";
+import { PromptPanel } from "@/components/prompt-panel";
 import { Button, Card, Field, Stars, controlClass, controlErrorClass } from "@/components/ui";
 import type {
   BusinessProfile,
   ContentType,
   Draft,
   QualityReport,
+  StatusFilter,
 } from "@/lib/types";
 
 const PROFILE: BusinessProfile = {
@@ -42,22 +48,84 @@ const DRAFT: Draft = {
     "Something new just landed on the shelf. Our single origin Ethiopian is",
     "bright, floral and made for slow mornings.",
     "",
-    "Grab a bag this week and tell us what you taste.",
+    "Book a bag this week and tell us what you taste.",
   ].join("\n"),
   rating: 4,
   status: "draft",
   statusChangedAt: null,
   analysis: ANALYSIS,
   parameters: {
-    model: "gpt-4o-mini",
+    model: "gemini-3.5-flash-lite",
     temperature: 0.7,
     systemPrompt: "You are a marketing content specialist for a small business.",
     userPrompt: "Write a social caption about the single origin Ethiopian launch.",
+    promptVersion: "builtin:1",
   },
+  usage: { inputTokens: 190, outputTokens: 240 },
   createdAt: new Date("2026-10-02T09:00:00Z").toISOString(),
 };
 
+const PREVIEW_DRAFTS: Draft[] = [
+  DRAFT,
+  {
+    ...DRAFT,
+    id: "00000000-0000-0000-0000-000000000004",
+    contentType: "email_newsletter",
+    topic: "October roast club email",
+    rating: null,
+    status: "published",
+    statusChangedAt: new Date("2026-10-03T10:00:00Z").toISOString(),
+    analysis: null,
+  },
+  {
+    ...DRAFT,
+    id: "00000000-0000-0000-0000-000000000005",
+    topic: "Winter hours announcement",
+    rating: 2,
+    status: "discarded",
+    statusChangedAt: new Date("2026-10-04T10:00:00Z").toISOString(),
+  },
+];
+
+const OVER_LIMIT: Draft = {
+  ...DRAFT,
+  id: "00000000-0000-0000-0000-000000000006",
+  topic: "Long caption sample",
+  contentText: [
+    "Something new just landed on the shelf, and if you like bright, floral",
+    "coffee with a little acidity then this one is for you. Our single origin",
+    "Ethiopian is picked by hand, roasted in small batches every Monday, and",
+    "it is at its best in the first three weeks after roasting. Come in before",
+    "the weekend, ask the counter for a taste, and tell us what you notice.",
+  ].join(" "),
+};
+
+const OUTLINE_TEXT = `Introduction
+We help cafe owners fill quiet afternoons.
+Three Ways To Fill A Quiet Tuesday
+1. Run a tasting flight for regulars.
+2. Pair a pastry with every coffee sold after two.
+3. Invite the local book club to host its meeting here.
+Conclusion
+Book a tasting flight this week and see the difference.`;
+
+const EMAIL_TEXT = `Subject: A quieter Tuesday, solved
+Preview: Three ways to fill the afternoon
+Hi there, here are three ways to fill a slow afternoon.
+Button: Book a tasting flight`;
+
+const PREVIEW_LABEL = "mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500";
+
+const REASONED = evaluateDraft({
+  contentText: OVER_LIMIT.contentText,
+  contentType: "social_caption",
+  keywords: OVER_LIMIT.keywords,
+  brandTone: "friendly",
+  rating: OVER_LIMIT.rating,
+});
+
 export default function PreviewPage() {
+  const [draftFilter, setDraftFilter] = useState<StatusFilter>("all");
   const [generator, setGenerator] = useState<{
     contentType: ContentType;
     topic: string;
@@ -83,7 +151,7 @@ export default function PreviewPage() {
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Example field" hint="hint text sits under the control">
-            <input className={controlClass} placeholder="you@example.com" />
+            <input className={controlClass} placeholder="your email address" />
           </Field>
           <Field label="Field with an error" error="This field is required">
             <input
@@ -147,29 +215,77 @@ export default function PreviewPage() {
         </Card>
 
         <Card
+          title="W3.2 Draft editor, over the caption limit"
+          subtitle="Owner B. The budget turns red and a missing structure stays grey."
+        >
+          <DraftEditor
+            draft={OVER_LIMIT}
+            onSave={() => {}}
+            onRate={() => {}}
+            onCopy={() => {}}
+          />
+        </Card>
+
+        <Card
           title="W3.3 Dashboard draft list"
-          subtitle="Owner B. Rows plus publish, discard, delete and an empty state."
+          subtitle="Owner B. Status filter with counts, mark ready, discard, delete, empty states."
         >
           <DraftList
-            drafts={[
-              DRAFT,
-              {
-                ...DRAFT,
-                id: "00000000-0000-0000-0000-000000000004",
-                contentType: "email_newsletter",
-                topic: "October roast club email",
-                rating: null,
-                status: "published",
-                statusChangedAt: new Date("2026-10-03T10:00:00Z").toISOString(),
-                analysis: null,
-              },
-            ]}
+            drafts={
+              draftFilter === "all"
+                ? PREVIEW_DRAFTS
+                : PREVIEW_DRAFTS.filter((draft) => draft.status === draftFilter)
+            }
+            filter={draftFilter}
+            counts={statusCounts(PREVIEW_DRAFTS)}
+            onFilter={setDraftFilter}
             onDelete={() => {}}
             onRate={() => {}}
             onStatus={() => {}}
+            onReuse={() => {}}
           />
         </Card>
       </div>
+
+      <Card
+        title="P1.2 Format preview"
+        subtitle="One panel, three formats. A caption over the limit is marked."
+      >
+        <div className="grid gap-6 md:grid-cols-3">
+          <div>
+            <p className={PREVIEW_LABEL}>Caption</p>
+            <DraftPreview contentType="social_caption" text={OVER_LIMIT.contentText} />
+          </div>
+          <div>
+            <p className={PREVIEW_LABEL}>Email</p>
+            <DraftPreview contentType="email_newsletter" text={EMAIL_TEXT} />
+          </div>
+          <div>
+            <p className={PREVIEW_LABEL}>Outline</p>
+            <DraftPreview contentType="blog_outline" text={OUTLINE_TEXT} />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="P1.3 Quality card with reasons"
+        subtitle="The structure score lists what the draft is missing, from the text itself."
+      >
+        {REASONED.ok ? (
+          <QualityCard
+            report={REASONED.value}
+            contentType="social_caption"
+            text={OVER_LIMIT.contentText}
+          />
+        ) : null}
+      </Card>
+
+      <Card
+        title="P1.1 How the draft was made"
+        subtitle="The prompt text stored with a draft, and the version that produced it."
+      >
+        <PromptPanel parameters={DRAFT.parameters} />
+      </Card>
     </main>
   );
 }

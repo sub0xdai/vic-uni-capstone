@@ -1,4 +1,4 @@
-import { parseBrandTone, type BusinessProfileDraft } from "./types.ts";
+import { isIndustry, parseBrandTone, type BusinessProfileDraft } from "./types.ts";
 
 export type ProfileField = keyof BusinessProfileDraft;
 
@@ -35,6 +35,11 @@ export function validateProfileDraft(form: FormData): ProfileDraftCheck {
     errors.brandTone = tone.error;
   }
 
+  const industry = value(form, "industry");
+  if (industry.length > 0 && !isIndustry(industry)) {
+    errors.industry = "Choose an industry from the list";
+  }
+
   if (!tone.ok || Object.keys(errors).length > 0) {
     return { kind: "invalid", errors };
   }
@@ -43,8 +48,7 @@ export function validateProfileDraft(form: FormData): ProfileDraftCheck {
     kind: "valid",
     draft: {
       businessName: value(form, "businessName"),
-      industry: value(form, "industry"),
-      description: value(form, "description"),
+      industry: value(form, "industry"),      description: value(form, "description"),
       targetAudience: value(form, "targetAudience"),
       brandTone: tone.value,
     },

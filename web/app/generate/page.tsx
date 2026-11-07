@@ -1,15 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { DraftEditor } from "@/components/draft-editor";
 import { GeneratorPanel, type GeneratorPanelProps } from "@/components/generator-panel";
 import { Card } from "@/components/ui";
+import { applyRating } from "@/lib/evaluate";
+import { planDraftSave } from "@/lib/draft-save";
 import { parseBusinessProfile } from "@/lib/rows";
+import { requestFromSearch } from "@/lib/reuse";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import { isContentType, type BusinessProfile, type Draft } from "@/lib/types";
 
 type Note = { kind: "error" | "info"; text: string };
+
+const EMPTY_REQUEST: GeneratorPanelProps["value"] = {
+  contentType: "social_caption",
+  topic: "",
+  keywords: [],
+};
 
 type ProfileResult = { profile: BusinessProfile | null; error: string | null };
 
@@ -71,11 +81,18 @@ async function loadProfile(): Promise<ProfileResult> {
 }
 
 export default function GeneratePage() {
-  const [value, setValue] = useState<GeneratorPanelProps["value"]>({
-    contentType: "social_caption",
-    topic: "",
-    keywords: [],
-  });
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-slate-500">Loading...</p>}>
+      <GenerateScreen />
+    </Suspense>
+  );
+}
+
+function GenerateScreen() {
+  const params = useSearchParams();
+  const [value, setValue] = useState<GeneratorPanelProps["value"]>(
+    () => requestFromSearch(params.toString()) ?? EMPTY_REQUEST,
+  );
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -145,16 +162,23 @@ export default function GeneratePage() {
       setNote({ kind: "error", text: client.error });
       return;
     }
+    const plan = planDraftSave(draft, text, profile?.brandTone ?? null);
+    const analysis = plan.analysis;
+    const problem = plan.outcome.kind === "skipped" ? plan.outcome.reason : null;
     const { error } = await client.value
       .from("generated_content")
-      .update({ content_text: text })
+      .update({ content_text: text, analysis })
       .eq("id", draft.id);
     if (error !== null) {
       setNote({ kind: "error", text: `Could not save your changes: ${error.message}` });
       return;
     }
-    setDraft({ ...draft, contentText: text });
-    setNote({ kind: "info", text: "Changes saved." });
+    setDraft({ ...draft, contentText: text, analysis });
+    setNote(
+      problem === null
+        ? { kind: "info", text: "Changes saved." }
+        : { kind: "error", text: `Saved, but the score was not updated: ${problem}.` },
+    );
   }
 
   async function rate(rating: number) {
@@ -166,15 +190,16 @@ export default function GeneratePage() {
       setNote({ kind: "error", text: client.error });
       return;
     }
+    const analysis = draft.analysis === null ? null : applyRating(draft.analysis, rating);
     const { error } = await client.value
       .from("generated_content")
-      .update({ rating })
+      .update(analysis === null ? { rating } : { rating, analysis })
       .eq("id", draft.id);
     if (error !== null) {
       setNote({ kind: "error", text: `Could not save the rating: ${error.message}` });
       return;
     }
-    setDraft({ ...draft, rating });
+    setDraft({ ...draft, rating, analysis });
   }
 
   return (

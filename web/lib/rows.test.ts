@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseBusinessProfile, parseDraft, parseQualityReport } from "./rows.ts";
+import {
+  parseBusinessProfile,
+  parseDraft,
+  parseModelRate,
+  parseQualityReport,
+  parseUsage,
+} from "./rows.ts";
 
 const PROFILE_ROW = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -113,4 +119,36 @@ test("an unknown status falls back to draft", () => {
   if (parsed.ok) {
     assert.equal(parsed.value.status, "draft");
   }
+});
+
+test("usage is read from the row and absent usage is null, not zero", () => {
+  const withUsage = parseDraft({ ...DRAFT_ROW, usage: { inputTokens: 190, outputTokens: 240 } });
+  assert.equal(withUsage.ok, true);
+  if (withUsage.ok) {
+    assert.deepEqual(withUsage.value.usage, { inputTokens: 190, outputTokens: 240 });
+  }
+  const without = parseDraft(DRAFT_ROW);
+  assert.equal(without.ok, true);
+  if (without.ok) {
+    assert.equal(without.value.usage, null);
+  }
+});
+
+test("a malformed usage object reads as absent rather than as zero", () => {
+  assert.equal(parseUsage({ inputTokens: 10 }), null);
+  assert.equal(parseUsage({ inputTokens: "10", outputTokens: 20 }), null);
+  assert.equal(parseUsage({ inputTokens: -1, outputTokens: 20 }), null);
+  assert.equal(parseUsage(null), null);
+  assert.deepEqual(parseUsage({ inputTokens: 10, outputTokens: 20 }), {
+    inputTokens: 10,
+    outputTokens: 20,
+  });
+});
+
+test("a rate row needs a model and two non-negative prices", () => {
+  const good = { model: "m", input_per_million: 0.1, output_per_million: 0.4 };
+  assert.equal(parseModelRate(good).ok, true);
+  assert.equal(parseModelRate({ ...good, model: undefined }).ok, false);
+  assert.equal(parseModelRate({ ...good, input_per_million: undefined }).ok, false);
+  assert.equal(parseModelRate({ ...good, input_per_million: -1 }).ok, false);
 });

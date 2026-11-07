@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DraftList } from "@/components/draft-list";
 import { QualityCard } from "@/components/quality-card";
 import { Card, Stars } from "@/components/ui";
-import { parseDraft } from "@/lib/rows";
+import { parseDraft, parseModelRate } from "@/lib/rows";
+import { applyRating } from "@/lib/evaluate";
+import { monthlySpend } from "@/lib/usage";
+import { reuseHref } from "@/lib/reuse";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 import {
   CONTENT_TYPE_LABELS,
@@ -13,9 +17,12 @@ import {
   MONTHLY_LIMIT,
   err,
   ok,
+  statusCounts,
   type Draft,
   type DraftStatus,
+  type ModelRate,
   type Result,
+  type StatusFilter,
 } from "@/lib/types";
 
 const NOT_SIGNED_IN = "You must be logged in to see your dashboard";
@@ -74,7 +81,10 @@ function Tile({
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [filter, setFilter] = useState<StatusFilter>("all");
+  const [rates, setRates] = useState<ModelRate[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now] = useState(() => new Date());
@@ -132,6 +142,33 @@ export default function DashboardPage() {
     };
   }, [load]);
 
+  useEffect(() => {
+    let active = true;
+    const client = supabaseBrowserResult();
+    if (!client.ok) {
+      return;
+    }
+    void client.value
+      .from("model_rate")
+      .select("*")
+      .then(({ data, error }) => {
+        if (!active || error !== null || data === null) {
+          return;
+        }
+        const parsed: ModelRate[] = [];
+        for (const item of data) {
+          const rate = parseModelRate(item);
+          if (rate.ok) {
+            parsed.push(rate.value);
+          }
+        }
+        setRates(parsed);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function remove(id: string) {
     const client = supabaseBrowserResult();
     if (!client.ok) {
@@ -152,16 +189,21 @@ export default function DashboardPage() {
       setMessage(client.error);
       return;
     }
+    const target = drafts.find((draft) => draft.id === id);
+    if (target === undefined) {
+      return;
+    }
+    const analysis = target.analysis === null ? null : applyRating(target.analysis, rating);
     const { error } = await client.value
       .from("generated_content")
-      .update({ rating })
+      .update(analysis === null ? { rating } : { rating, analysis })
       .eq("id", id);
     if (error !== null) {
       setMessage(`Could not save the rating: ${error.message}`);
       return;
     }
     setDrafts((current) =>
-      current.map((draft) => (draft.id === id ? { ...draft, rating } : draft)),
+      current.map((draft) => (draft.id === id ? { ...draft, rating, analysis } : draft)),
     );
   }
 
@@ -192,6 +234,10 @@ export default function DashboardPage() {
     );
   }
 
+  function reuse(draft: Draft) {
+    router.push(reuseHref(draft));
+  }
+
   if (loading) {
     return <p className="p-6 text-sm text-slate-500">Loading...</p>;
   }
@@ -215,6 +261,13 @@ export default function DashboardPage() {
   const usedThisMonth = countThisMonth(drafts, now);
   const limitReached = usedThisMonth >= MONTHLY_LIMIT;
   const favourites = favouriteDrafts(drafts);
+  const spend = monthlySpend(drafts, rates, now);
+  const counts = statusCounts(drafts);
+  const visible = filter === "all" ? drafts : drafts.filter((draft) => draft.status === filter);
+  const costLine =
+    spend.cost === null
+      ? "No rate on record for this model."
+      : `Estimated cost $${spend.cost < 0.01 ? spend.cost.toFixed(6) : spend.cost.toFixed(4)}.`;
 
   return (
     <main className="mx-auto w-full max-w-4xl space-y-6 p-6">
@@ -255,6 +308,10 @@ export default function DashboardPage() {
             alert={limitReached}
           />
         </dl>
+        <p className="mt-3 text-sm text-slate-500">
+          {`This month: ${spend.tokens.inputTokens.toLocaleString()} input tokens, `}
+          {`${spend.tokens.outputTokens.toLocaleString()} output tokens. ${costLine}`}
+        </p>
         {limitReached ? (
           <p className="mt-3 text-sm text-red-600" role="alert">
             You have reached your monthly generation limit.
@@ -295,16 +352,24 @@ export default function DashboardPage() {
 
       <Card title="Generated content" subtitle="Newest first.">
         <DraftList
-          drafts={drafts}
+          drafts={visible}
+          filter={filter}
+          counts={counts}
+          onFilter={setFilter}
           onDelete={remove}
           onRate={rate}
           onStatus={changeStatus}
+          onReuse={reuse}
         />
       </Card>
 
       {latest === null ? null : (
         <Card title="Latest draft quality" subtitle={latest.topic}>
-          <QualityCard report={latest.analysis} />
+          <QualityCard
+            report={latest.analysis}
+            contentType={latest.contentType}
+            text={latest.contentText}
+          />
         </Card>
       )}
 

@@ -97,7 +97,30 @@ it is displayed on the screen.
 re-ranks, and the system updates the paired dataset of automated metrics
 and user feedback to improve prompt accuracy for that specific industry.
 
-### 4.5 Use Case Diagram sketch
+### 4.5 Exception and alternative flows
+
+The section 4 flows describe the happy path.
+These are the ways it does not go that way, and what the system does about each one.
+Every row names the requirement it belongs to from section 2.10.
+
+| Flow | Trigger | System response | Requirement |
+|---|---|---|---|
+| A1 Profile is incomplete | A mandatory profile field is empty or whitespace | The form marks each empty field and does not save | FR-04, FR-07 |
+| A2 Industry is not on the list | A value outside the fixed industry list is submitted | The form refuses it and asks for a choice from the list | FR-06 |
+| A3 No profile yet | Generate is pressed with no saved profile | 409, with a message that the profile must be created first | FR-07 |
+| A4 Not signed in | A protected page or the generate route is reached without a session | A page redirects to the login screen, the route answers 401 | FR-24 |
+| A5 Generation already running | A second generate request arrives while one is in flight for that user | 429, one sentence asking the owner to wait, and no second model call | FR-16 |
+| A6 Monthly limit reached | The user already has twenty drafts this UTC month | 429, and the dashboard shows the limit with the count | FR-17 |
+| A7 AI service fails or times out | Upstream error, network failure, or the thirty second timeout | The route maps the failure to one of four kinds and one status, the form keeps what was typed, and the message is plain | FR-10 |
+| A8 AI returns nothing usable | An empty or unreadable response | Treated as a failure, not saved as a draft | FR-10, FR-13 |
+| A9 Draft is not the caller's | A draft id belonging to another account is opened | Not found, with no hint that it exists | FR-20, FR-21 |
+| A10 Draft is too short to score | An edit leaves fewer than three words | The text is saved, the previous score is kept, and the page says the score was not updated | FR-11, FR-13 |
+| A11 Saved template is unusable | An active prompt body no longer names a structure the scorer checks | The row is logged, skipped, and the built-in body is used, and the draft records which one | FR-09 |
+| A12 Duplicate submit | The same request identifier arrives twice | The first draft is returned instead of a second model call | FR-13, FR-16 |
+
+Two of these are worth calling out because they were found during the build rather than designed up front: A5, because the browser guard did not survive a second tab, and A10, because saving an edit used to leave a score describing text that no longer existed.
+
+### 4.6 Use Case Diagram sketch
 
 
 <img src="../assets/media/image9.png"

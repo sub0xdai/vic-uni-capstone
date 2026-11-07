@@ -9,6 +9,7 @@ speaker-notes.md
 
 # Devlog (private)
 devlog.md
+handoff.md
 
 # Claude Code
 CLAUDE.md
@@ -18,3 +19,6 @@ CLAUDE.md
 docs/dist/
 
 .env
+.venv/
+__pycache__/
+*.pyc

@@ -134,9 +134,23 @@ Three enforcement layers, one definition.
 
 `lib/supabase/server.ts` and `lib/supabase/client.ts` are the only modules that import the Supabase SDK.
 `lib/prompts.ts` is the only module that builds prompt text.
+`lib/generator.ts` is the port every caller uses for generation, and `lib/gemini.ts` is the only module that knows how Gemini's request and response look.
+
+Provider, model and base URL resolve from configuration rather than from a compile-time import, so the provider is a value the system can report and change without touching the route.
+An unknown provider fails with an `invariant` naming it, because a wrong deployment variable has no recovery path at request time.
+Generation failures come back as a closed set of four kinds, and the route maps each kind to one status code, so the adapter never chooses an HTTP status.
 
 Replacing the model provider, or leaving Supabase, touches a small number of files.
 This is hexagonal architecture applied only where a real alternative exists, not applied uniformly for symmetry.
+
+The provider was already replaced once in practice: the build began against OpenAI and moved to Gemini.
+Section 5 of the proposal still shows OpenAI in its diagrams, and this port is what makes that a stale drawing rather than a stale design.
+
+Prompt text is a third boundary, and it has the same shape.
+`lib/prompts.ts` holds the built-in body for each content type and the rules for what each body has to mention.
+A stored body in `prompt_template` wins over the built-in one when it is active and passes that lint, and every draft records which one produced it as `prompt_version`.
+A template that fails the lint is logged and skipped rather than sent, so an edit in the SQL editor cannot quietly lower a structure score.
+The tone descriptors stay in code, because nothing scores them.
 
 ### 3.8 Contract-first components
 
@@ -198,6 +212,22 @@ The full prompt text is stored rather than a hash, because the evaluation work n
 This follows from the principle that a result that cannot be reproduced cannot be defended.
 The cost is four columns now against a migration later.
 
+### 3.13 The score lives with the metrics that produce it
+
+Section 2.7 of the proposal lists a `Quality_Score` column beside the `Analysis_JSON` it is derived from.
+The build has no such column. The score is stored inside `analysis` as `overallScore`.
+
+A stored score and the five metrics behind it are two records of one fact, and the database cannot keep them agreeing.
+A write that updates one and not the other leaves a draft whose headline number contradicts its own report, and the dashboard reads the headline.
+Storing the score with its inputs makes that state unrepresentable rather than unlikely.
+
+The same rule is enforced in code at both ends.
+`assertQualityReport` refuses a report whose `overallScore` disagrees with its weighted metrics, so the write never happens.
+`parseQualityReport` applies the same check on the way back in, so a hand-edited row is rejected rather than displayed.
+
+The cost is on the read side: a SQL query for the score has to read `analysis->>'overallScore'` and cast it.
+That is a convenience given up in exchange for a guarantee, and this design takes the guarantee.
+
 ## 4. Rejected approaches
 
 Recorded so the decision is visible as a decision rather than an omission.
@@ -218,10 +248,13 @@ Recorded so the decision is visible as a decision rather than an omission.
 
 Open items, recorded honestly.
 
-**Double submission on generate.**
-The brief specifies one generation per user at a time.
-The current design allows a double-click to post twice, creating two drafts and two billable model calls.
-The fix is a client-supplied request identifier with a unique constraint on the drafts table.
+**Double submission on generate, and what is left of it.**
+The brief specifies one generation per user at a time, and two mechanisms now hold it.
+A client-supplied request identifier with a unique constraint makes a retry return the first draft instead of buying a second one.
+`generation_lock` makes concurrency explicit: a request takes its own row before the model call and releases it in a `finally`, and a second request while one is running is answered with 429.
+The lock lives in the database rather than in process memory, so it holds across instances.
+What is left is the abandoned case: a row older than ninety seconds is treated as crashed and cleared, so a generation that somehow ran longer than that could overlap with the next request.
+The model timeout is thirty seconds, so the margin is three times the maximum call.
 
 **`proxy.ts` imports the Supabase SDK directly.**
 It is the single exception to the ports boundary in section 3.7.

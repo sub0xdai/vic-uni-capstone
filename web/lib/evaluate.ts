@@ -1,9 +1,11 @@
 import { invariant } from "./assert.ts";
-import { assertQualityReport, weightedScore } from "./score.ts";
+import { assertQualityReport, metricsOf, weightedScore } from "./score.ts";
 import {
   RATING_MAX,
+  SOCIAL_CAPTION_MAX,
   type BrandTone,
   type ContentType,
+  type Draft,
   type QualityMetric,
   type QualityReport,
   type Result,
@@ -108,46 +110,110 @@ export function keywordCoverage(text: string, keywords: readonly string[]): numb
   return hits / wanted.length;
 }
 
-function sectionHeadings(text: string): string[] {
+export function sectionHeadings(text: string): string[] {
   return text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => HEADING.test(line) || LABEL_LINE.test(line));
 }
 
-type Check = (text: string) => boolean;
+export function ctaMatch(text: string): string | null {
+  const match = text.match(CTA);
+  return match === null ? null : match[0];
+}
 
-const BLOG_CHECKS: Check[] = [
-  (text) => /\bintroduction\b/i.test(text),
-  (text) => {
-    const sections = sectionHeadings(text).length;
-    return sections >= 3 && sections <= 6;
+type StructureCheck = {
+  id: string;
+  reason: string;
+  test: (text: string) => boolean;
+};
+
+const BLOG_CHECKS: StructureCheck[] = [
+  {
+    id: "introduction",
+    reason: "no introduction line",
+    test: (text) => /\bintroduction\b/i.test(text),
   },
-  (text) => /\b(conclusion|summary|takeaway|wrap[- ]?up)\b/i.test(text),
+  {
+    id: "headings",
+    reason: "needs three to six headings",
+    test: (text) => {
+      const sections = sectionHeadings(text).length;
+      return sections >= 3 && sections <= 6;
+    },
+  },
+  {
+    id: "conclusion",
+    reason: "no conclusion line",
+    test: (text) => /\b(conclusion|summary|takeaway|wrap[- ]?up)\b/i.test(text),
+  },
 ];
 
-const SOCIAL_CHECKS: Check[] = [
-  (text) => text.trim().length > 0 && text.trim().length <= 280,
-  (text) => CTA.test(text),
+const SOCIAL_CHECKS: StructureCheck[] = [
+  {
+    id: "character limit",
+    reason: `over the ${SOCIAL_CAPTION_MAX} character limit`,
+    test: (text) => text.trim().length > 0 && text.trim().length <= SOCIAL_CAPTION_MAX,
+  },
+  {
+    id: "call to action",
+    reason: "no call to action",
+    test: (text) => CTA.test(text),
+  },
 ];
 
-const EMAIL_CHECKS: Check[] = [
-  (text) => /\bsubject\b/i.test(text),
-  (text) => /\bpreview\b/i.test(text),
-  (text) => /\b(button|cta|call to action)\b/i.test(text) || CTA.test(text),
+const EMAIL_CHECKS: StructureCheck[] = [
+  {
+    id: "subject line",
+    reason: "no subject line",
+    test: (text) => /\bsubject\b/i.test(text),
+  },
+  {
+    id: "preview line",
+    reason: "no preview line",
+    test: (text) => /\bpreview\b/i.test(text),
+  },
+  {
+    id: "button",
+    reason: "no button or call to action",
+    test: (text) => /\b(button|cta|call to action)\b/i.test(text) || CTA.test(text),
+  },
 ];
 
-const CHECKS: Record<ContentType, Check[]> = {
+const CHECKS: Record<ContentType, StructureCheck[]> = {
   blog_outline: BLOG_CHECKS,
   social_caption: SOCIAL_CHECKS,
   email_newsletter: EMAIL_CHECKS,
 };
 
+export type StructureResult =
+  | { id: string; kind: "passed" }
+  | { id: string; kind: "failed"; reason: string };
+
+export function structureParts(text: string, contentType: ContentType): StructureResult[] {
+  const parts = CHECKS[contentType];
+  invariant(parts.length > 0, `no structure checks for ${contentType}`);
+  return parts.map((part) =>
+    part.test(text)
+      ? { id: part.id, kind: "passed" }
+      : { id: part.id, kind: "failed", reason: part.reason },
+  );
+}
+
 export function structureScore(text: string, contentType: ContentType): number {
-  const checks = CHECKS[contentType];
-  invariant(checks.length > 0, `no structure checks for ${contentType}`);
-  const passed = checks.filter((check) => check(text)).length;
-  return passed / checks.length;
+  const parts = structureParts(text, contentType);
+  const passed = parts.filter((part) => part.kind === "passed").length;
+  return passed / parts.length;
+}
+
+export function structureReasons(text: string, contentType: ContentType): string[] {
+  const reasons: string[] = [];
+  for (const part of structureParts(text, contentType)) {
+    if (part.kind === "failed") {
+      reasons.push(part.reason);
+    }
+  }
+  return reasons;
 }
 
 function warmth(text: string): number {
@@ -201,4 +267,30 @@ export function evaluateDraft(input: EvaluationInput): Result<QualityReport> {
   const report: QualityReport = { ...metrics, overallScore: weightedScore(metrics) };
   assertQualityReport(report);
   return ok(report);
+}
+
+export function applyRating(report: QualityReport, rating: number): QualityReport {
+  invariant(report !== null && typeof report === "object", "quality report is not an object");
+  assertQualityReport(report);
+  const metrics = { ...metricsOf(report), userSatisfactionScore: satisfactionFrom(rating) };
+  const next: QualityReport = { ...metrics, overallScore: weightedScore(metrics) };
+  assertQualityReport(next);
+  return next;
+}
+
+export function rescoreText(
+  draft: Draft,
+  text: string,
+  brandTone: BrandTone,
+): Result<QualityReport> {
+  invariant(draft !== null && typeof draft === "object", "rescore got no draft");
+  invariant(typeof text === "string", "rescore got no text");
+  invariant(Array.isArray(draft.keywords), "rescore got a draft with no keyword list");
+  return evaluateDraft({
+    contentText: text,
+    contentType: draft.contentType,
+    keywords: draft.keywords,
+    brandTone,
+    rating: draft.rating,
+  });
 }
