@@ -48,3 +48,18 @@ next-env.d.ts
 /web/out/
 /web/build/
 /docs/dist/
+# Devlog (private)
+devlog.md
+handoff.md
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Generated proposal docx (build output)
+docs/dist/
+
+.env
+.venv/
+__pycache__/
+*.pyc
