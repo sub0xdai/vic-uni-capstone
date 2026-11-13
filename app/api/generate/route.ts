@@ -1,101 +1,94 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+const MAX_FIELD_LENGTH = 500;
+
+function readText(value: unknown, fallback: string): string | null {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_FIELD_LENGTH ? trimmed : null;
+}
+
 export async function POST(request: Request) {
+  let body: unknown;
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  }
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Gemini API key is missing." },
-        { status: 500 }
-      );
-    }
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Request body must be an object." }, { status: 400 });
+  }
 
-    const body = await request.json();
+  const input = body as Record<string, unknown>;
+  const businessName = readText(input.businessName, "");
+  const industry = readText(input.industry, "");
+  const targetAudience = readText(input.targetAudience, "General customers");
+  const tone = readText(input.tone, "Friendly and professional");
+  const contentType = readText(input.contentType, "Instagram post");
 
-    const {
-      businessName,
-      industry,
-      targetAudience,
-      tone,
-      contentType,
-    } = body;
+  if (businessName === null || industry === null || !businessName || !industry) {
+    return NextResponse.json(
+      { error: "Business name and industry are required and must be 500 characters or fewer." },
+      { status: 400 },
+    );
+  }
 
-    if (
-      typeof businessName !== "string" ||
-      !businessName.trim() ||
-      typeof industry !== "string" ||
-      !industry.trim()
-    ) {
-      return NextResponse.json(
-        { error: "Business name and industry are required." },
-        { status: 400 }
-      );
-    }
+  if (targetAudience === null || tone === null || contentType === null) {
+    return NextResponse.json(
+      { error: "Audience, tone, and content type must be 500 characters or fewer." },
+      { status: 400 },
+    );
+  }
 
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "The AI service is not configured." }, { status: 500 });
+  }
+
+  try {
     const ai = new GoogleGenAI({ apiKey });
-
-    const prompt = `
-You are a professional marketing copywriter.
-
-Create COMPLETE marketing content for this business.
+    const prompt = `You are a professional marketing copywriter. Create complete marketing content for this business.
 
 Business: ${businessName}
 Industry: ${industry}
-Target audience: ${targetAudience || "General customers"}
-Tone: ${tone || "Friendly and professional"}
-Content type: ${contentType || "Instagram post"}
+Target audience: ${targetAudience}
+Tone: ${tone}
+Content type: ${contentType}
 
-IMPORTANT REQUIREMENTS:
+Requirements:
 - Write the complete requested content, not just a title or subject.
-- For a marketing email, include:
-  1. Subject line
-  2. Greeting
-  3. A complete email body with at least two paragraphs
-  4. A clear call to action
-  5. A suitable sign-off
+- For a marketing email, include a subject line, greeting, at least two body paragraphs, a clear call to action, and a sign-off.
 - For a social media post, include a headline, full post text, call to action, and relevant hashtags.
-- For other content types, provide the complete content appropriate to the selected type.
+- For other content types, provide complete content appropriate to the selected type.
 - Do not invent business facts, prices, or special offers.
-- Keep the response under 200 words.
-- Return plain text without Markdown formatting.
-`;
+- Keep the response under 200 words and return plain text without Markdown formatting.`;
 
-    // Wait for Gemini without imposing an artificial timeout.
-    const result = await ai.interactions.create({
-      model: "gemini-3.8-flash",
-      input: prompt,
-      generation_config: {
-        thinking_level: "low",
-        max_output_tokens: 500,
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        maxOutputTokens: 500,
+        temperature: 0.7,
       },
     });
 
-    const content = result.output_text?.trim();
-
+    const content = result.text?.trim();
     if (!content) {
-      throw new Error("Gemini returned no text.");
+      console.error("Gemini returned no text.");
+      return NextResponse.json({ error: "The AI service returned no content. Please try again." }, { status: 502 });
     }
 
-    return NextResponse.json({
-      success: true,
-      content,
-    });
+    return NextResponse.json({ success: true, content });
   } catch (error) {
     console.error("Gemini generation error:", error);
-
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Content generation failed.",
-      },
-      { status: 500 }
+      { error: "Content generation failed. Please try again." },
+      { status: 502 },
     );
   }
 }
