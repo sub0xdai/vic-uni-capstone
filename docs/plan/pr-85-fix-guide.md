@@ -39,7 +39,9 @@ After that, one manual test pass, then the pull request.
 ### What happened
 
 The branch was merged with `master`, and the merge kept two copies of the same function in one file.
-The second copy also mentions `"video_generation"`, which does not exist in this app, and leaves a variable unused.
+The second copy tests for `"video_generation"`, which the type in that file does not declare, and leaves `isMediaMode` unused.
+`master` has both modes now, because the video card landed there in PR 84.
+The merge kept the old type from your side and the new function from `master`, so the two halves do not fit together.
 TypeScript refuses to build a file with two functions of the same name, so the whole app fails to build, not just the panel.
 
 ### What to do
@@ -72,6 +74,8 @@ When you are done, exactly one `selectMode` remains and it looks like this:
 
 That is the whole fix.
 The rest of the file stays as it is.
+Your version of the panel has no video card, which is why the video branch goes with the duplicate.
+The next merge with `master` brings the video card back; if the same block reappears in the conflict, resolve it by taking `master`'s file and applying your image props to it again, then run the checks.
 
 One note about the file.
 The repo's line-length rule also flags about a dozen long `className` lines that came in with the redesign.
