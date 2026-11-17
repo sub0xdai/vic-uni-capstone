@@ -18,8 +18,6 @@ import { Button, Field, controlClass } from "@/components/ui";
 
 import {
   BRAND_TONE_LABELS,
-  CONTENT_TYPES,
-  CONTENT_TYPE_LABELS,
   type BusinessProfile,
   type ContentType,
 } from "@/lib/types";

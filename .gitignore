@@ -63,3 +63,9 @@ docs/dist/
 .venv/
 __pycache__/
 *.pyc
+
+# Archive (reference materials, build workspace, session notes)
+archive/
+
+# Speaker notes (private prep, not for repo)
+speaker-notes.md

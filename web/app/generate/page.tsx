@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  ArrowUpRight,
   Building2,
   CheckCircle2,
   FileText,
