@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Mail,
   Image as ImageIcon,
-  Video,
   Plus,
   X,
   Sparkles,
@@ -18,8 +17,6 @@ import { Button, Field, controlClass } from "@/components/ui";
 
 import {
   BRAND_TONE_LABELS,
-  CONTENT_TYPES,
-  CONTENT_TYPE_LABELS,
   type BusinessProfile,
   type ContentType,
 } from "@/lib/types";
@@ -36,9 +33,14 @@ export type GeneratorPanelProps = {
   onChange: (next: GeneratorPanelProps["value"]) => void;
   onGenerate: () => void;
   profile?: BusinessProfile | null;
+
+  imagePrompt: string;
+  imagePending: boolean;
+  onImagePromptChange: (prompt: string) => void;
+  onGenerateImage: () => void;
 };
 
-type GeneratorMode = ContentType | "image_generation" | "video_generation";
+type GeneratorMode = ContentType | "image_generation";
 
 const OPTIONS = [
   {
@@ -69,13 +71,6 @@ const OPTIONS = [
     icon: ImageIcon,
     category: "Visual media",
   },
-  {
-    id: "video_generation",
-    title: "AI Video Generator",
-    description: "Create promotional videos",
-    icon: Video,
-    category: "Visual media",
-  },
 ] as const;
 
 export function GeneratorPanel({
@@ -84,25 +79,24 @@ export function GeneratorPanel({
   onChange,
   onGenerate,
   profile = null,
+  imagePrompt,
+  imagePending,
+  onImagePromptChange,
+  onGenerateImage,
 }: GeneratorPanelProps) {
   const [keywordInput, setKeywordInput] = useState("");
+
   const [selectedMode, setSelectedMode] = useState<GeneratorMode>(
     value.contentType,
   );
 
   const topicMissing = value.topic.trim().length === 0;
-
-  const isMediaMode =
-    selectedMode === "image_generation" ||
-    selectedMode === "video_generation";
+  const imagePromptMissing = imagePrompt.trim().length === 0;
 
   function selectMode(mode: GeneratorMode) {
     setSelectedMode(mode);
 
-    if (
-      mode !== "image_generation" &&
-      mode !== "video_generation"
-    ) {
+    if (mode !== "image_generation") {
       onChange({
         ...value,
         contentType: mode,
@@ -144,7 +138,11 @@ export function GeneratorPanel({
       onSubmit={(event) => {
         event.preventDefault();
 
-        if (!pending && !topicMissing && !isMediaMode) {
+        if (
+          !pending &&
+          !topicMissing &&
+          selectedMode !== "image_generation"
+        ) {
           onGenerate();
         }
       }}
@@ -175,11 +173,9 @@ export function GeneratorPanel({
               <button
                 key={option.id}
                 type="button"
-                disabled={pending}
+                disabled={pending || imagePending}
                 aria-pressed={selected}
-                onClick={() => {
-                  selectMode(option.id);
-                }}
+                onClick={() => selectMode(option.id)}
                 className={`group relative flex min-h-[140px] flex-col items-start rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
                   selected
                     ? "border-blue-500 bg-blue-50 shadow-sm ring-2 ring-blue-100"
@@ -229,44 +225,84 @@ export function GeneratorPanel({
         </div>
       </section>
 
-      {/* Media selection notice */}
+      {/* Image generation interface */}
 
-      {isMediaMode ? (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600">
-              {selectedMode === "image_generation" ? (
+      {selectedMode === "image_generation" ? (
+        <section className="space-y-5">
+          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
                 <ImageIcon className="h-5 w-5" />
-              ) : (
-                <Video className="h-5 w-5" />
-              )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-blue-950">
+                  AI Image Generator
+                </h3>
+
+                <p className="mt-1 text-xs text-blue-700">
+                  Powered by Cloudflare FLUX.1 Schnell
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p className="text-sm font-bold text-blue-900">
-                {selectedMode === "image_generation"
-                  ? "AI Image Generator"
-                  : "AI Video Generator"}
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-blue-800">
-                This generation mode has its own media workflow.
-                Its dedicated AI service and generation controls
-                will be connected separately.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  selectMode("social_caption");
-                }}
-                className="mt-3 text-xs font-bold text-blue-700 underline hover:text-blue-900"
-              >
-                Return to text generation
-              </button>
-            </div>
+            <p className="mt-4 text-xs leading-6 text-slate-600">
+              Describe the image you want to create. Be specific about
+              the subject, setting, lighting, colours and visual style.
+            </p>
           </div>
-        </div>
+
+          <Field
+            label="Describe your image"
+            hint={`${imagePrompt.length}/2048 characters`}
+          >
+            <textarea
+              className={`${controlClass} min-h-[150px] resize-y`}
+              value={imagePrompt}
+              maxLength={2048}
+              disabled={imagePending}
+              placeholder="Example: A premium product photograph of an Ethiopian coffee cup on a wooden table, warm natural lighting, elegant minimalist styling, professional commercial photography..."
+              onChange={(event) =>
+                onImagePromptChange(event.target.value)
+              }
+            />
+          </Field>
+
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+              <Sparkles className="h-4 w-4 text-blue-600" />
+              Image generation tips
+            </div>
+
+            <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-600">
+              <li>• Describe the main subject clearly.</li>
+              <li>• Include the desired lighting and atmosphere.</li>
+              <li>• Specify the photography or illustration style.</li>
+              <li>• Avoid asking the AI to reproduce exact brand logos.</li>
+            </ul>
+          </div>
+
+          <Button
+            type="button"
+            disabled={imagePending || imagePromptMissing}
+            onClick={onGenerateImage}
+          >
+            {imagePending ? (
+              <span className="flex items-center gap-2">
+                <span
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  aria-hidden="true"
+                />
+                Creating your image...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <WandSparkles className="h-4 w-4" />
+                Generate image
+              </span>
+            )}
+          </Button>
+        </section>
       ) : (
         <>
           {/* Topic */}
@@ -303,7 +339,10 @@ export function GeneratorPanel({
                     type="text"
                     className={controlClass}
                     value={keywordInput}
-                    disabled={pending || value.keywords.length >= MAX_KEYWORDS}
+                    disabled={
+                      pending ||
+                      value.keywords.length >= MAX_KEYWORDS
+                    }
                     placeholder="Add keywords to guide your content..."
                     onChange={(event) => {
                       setKeywordInput(event.target.value);
@@ -321,7 +360,10 @@ export function GeneratorPanel({
               <Button
                 type="button"
                 variant="ghost"
-                disabled={pending || value.keywords.length >= MAX_KEYWORDS}
+                disabled={
+                  pending ||
+                  value.keywords.length >= MAX_KEYWORDS
+                }
                 onClick={addKeyword}
               >
                 <span className="flex items-center gap-1">
@@ -344,9 +386,7 @@ export function GeneratorPanel({
                       type="button"
                       aria-label={`Remove keyword ${word}`}
                       disabled={pending}
-                      onClick={() => {
-                        removeKeyword(word);
-                      }}
+                      onClick={() => removeKeyword(word)}
                       className="ml-1 rounded-full p-0.5 text-blue-500 transition hover:bg-blue-100 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -380,7 +420,7 @@ export function GeneratorPanel({
             </div>
           )}
 
-          {/* Generate button */}
+          {/* Generate text button */}
 
           <Button
             type="submit"
