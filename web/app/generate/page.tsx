@@ -8,17 +8,14 @@ import {
   ArrowLeft,
   Building2,
   CheckCircle2,
+  Download,
   FileText,
   Image as ImageIcon,
   Sparkles,
-  Video,
   WandSparkles,
 } from "lucide-react";
 
-import {
-  DraftEditor,
-} from "@/components/draft-editor";
-
+import { DraftEditor } from "@/components/draft-editor";
 import {
   GeneratorPanel,
   type GeneratorPanelProps,
@@ -170,7 +167,13 @@ function GenerateScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [note, setNote] = useState<Note | null>(null);
 
+  // Image generation state
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [imagePending, setImagePending] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+
   const inFlight = useRef(false);
+  const imageInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -195,6 +198,7 @@ function GenerateScreen() {
     };
   }, []);
 
+  // Existing Gemini text generation
   async function generate() {
     if (inFlight.current) {
       return;
@@ -253,6 +257,73 @@ function GenerateScreen() {
     }
   }
 
+  // Cloudflare FLUX image generation
+  async function generateImage() {
+    if (imageInFlight.current || imagePrompt.trim().length === 0) {
+      return;
+    }
+
+    imageInFlight.current = true;
+    setImagePending(true);
+    setGeneratedImage(null);
+    setNote(null);
+
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: imagePrompt.trim(),
+        }),
+      });
+
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        setNote({
+          kind: "error",
+          text: readError(payload),
+        });
+        return;
+      }
+
+      if (
+        payload === null ||
+        typeof payload !== "object" ||
+        typeof (payload as Record<string, unknown>).imageDataUrl !== "string" ||
+        !(payload as Record<string, string>).imageDataUrl.startsWith(
+          "data:image/",
+        )
+      ) {
+        setNote({
+          kind: "error",
+          text: "The image service returned an invalid image.",
+        });
+        return;
+      }
+
+      setGeneratedImage(
+        (payload as Record<string, string>).imageDataUrl,
+      );
+
+      setNote({
+        kind: "info",
+        text: "Your image has been generated successfully!",
+      });
+    } catch {
+      setNote({
+        kind: "error",
+        text: "Could not reach the image-generation server.",
+      });
+    } finally {
+      imageInFlight.current = false;
+      setImagePending(false);
+    }
+  }
+
+  // Existing draft saving
   async function save(text: string) {
     if (draft === null) {
       return;
@@ -318,6 +389,7 @@ function GenerateScreen() {
     );
   }
 
+  // Existing draft rating
   async function rate(rating: number) {
     if (draft === null) {
       return;
@@ -387,8 +459,8 @@ function GenerateScreen() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-              Create engaging marketing content tailored to your
-              business, audience and brand voice.
+              Create engaging marketing content and visuals tailored to
+              your business, audience and brand voice.
             </p>
           </div>
 
@@ -420,7 +492,7 @@ function GenerateScreen() {
                   </h2>
 
                   <p className="mt-1 text-xs text-slate-500">
-                    Configure your content and let AI do the writing.
+                    Generate marketing copy or create original AI images.
                   </p>
                 </div>
               </div>
@@ -434,6 +506,12 @@ function GenerateScreen() {
                 onChange={setValue}
                 onGenerate={() => {
                   void generate();
+                }}
+                imagePrompt={imagePrompt}
+                imagePending={imagePending}
+                onImagePromptChange={setImagePrompt}
+                onGenerateImage={() => {
+                  void generateImage();
                 }}
               />
             </div>
@@ -536,11 +614,11 @@ function GenerateScreen() {
 
                   <div>
                     <p className="text-sm font-semibold text-slate-800">
-                      Choose your content
+                      Choose what to create
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Select the format and describe your topic.
+                      Select a writing format or AI image generation.
                     </p>
                   </div>
                 </div>
@@ -552,11 +630,11 @@ function GenerateScreen() {
 
                   <div>
                     <p className="text-sm font-semibold text-slate-800">
-                      Generate with AI
+                      Describe your idea
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Create content using your business profile.
+                      Give the AI instructions for your content or image.
                     </p>
                   </div>
                 </div>
@@ -568,18 +646,18 @@ function GenerateScreen() {
 
                   <div>
                     <p className="text-sm font-semibold text-slate-800">
-                      Review and save
+                      Generate and review
                     </p>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Edit your draft, check its quality and save changes.
+                      Review your result, edit your text or download your image.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Media studio preview */}
+            {/* Creative media information */}
 
             <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">
               <div className="flex items-center gap-2">
@@ -591,43 +669,74 @@ function GenerateScreen() {
               </div>
 
               <p className="mt-2 text-xs leading-5 text-slate-600">
-                Create visual marketing assets to complement your
-                generated content.
+                Create original visual marketing assets for your business.
               </p>
 
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-blue-100 bg-white p-3">
-                  <ImageIcon className="h-5 w-5 text-blue-600" />
+              <div className="mt-5 rounded-xl border border-blue-100 bg-white p-4">
+                <ImageIcon className="h-6 w-6 text-blue-600" />
 
-                  <p className="mt-2 text-xs font-bold text-slate-800">
-                    AI images
-                  </p>
+                <p className="mt-2 text-sm font-bold text-slate-800">
+                  AI image generation
+                </p>
 
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Image creation
-                  </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Powered by Cloudflare FLUX.1 Schnell.
+                </p>
+
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Daily limit: 3 images
+                </div>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        {/* Generated image preview */}
+
+        {generatedImage !== null && (
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 sm:px-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <ImageIcon className="h-5 w-5" />
                 </div>
 
-                <div className="rounded-xl border border-blue-100 bg-white p-3">
-                  <Video className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h2 className="font-bold text-slate-900">
+                    Your generated image
+                  </h2>
 
-                  <p className="mt-2 text-xs font-bold text-slate-800">
-                    AI videos
-                  </p>
-
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Video creation
+                  <p className="mt-1 text-xs text-slate-500">
+                    Created with Cloudflare FLUX.1 Schnell
                   </p>
                 </div>
               </div>
 
-              <p className="mt-4 text-[11px] leading-5 text-slate-500">
-                Media generation will be connected as a separate
-                feature. No sample or placeholder media is generated here.
+              <a
+                href={generatedImage}
+                download="contentcraft-generated-image.jpg"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
+              >
+                <Download className="h-4 w-4" />
+                Download image
+              </a>
+            </div>
+
+            <div className="bg-slate-50 p-4 sm:p-8">
+              <img
+                src={generatedImage}
+                alt={`AI-generated image: ${imagePrompt}`}
+                className="mx-auto max-h-[700px] w-full rounded-xl object-contain shadow-sm"
+              />
+
+              <p className="mx-auto mt-4 max-w-3xl text-center text-xs leading-5 text-slate-500">
+                <strong className="text-slate-700">Prompt:</strong>{" "}
+                {imagePrompt}
               </p>
             </div>
-          </aside>
-        </section>
+          </section>
+        )}
 
         {/* Notifications */}
 
@@ -696,7 +805,7 @@ function GenerateScreen() {
         {/* Footer */}
 
         <footer className="pb-5 text-center text-xs text-slate-400">
-          ContentCraft · AI-powered marketing content creation
+          ContentCraft · AI-powered marketing workspace
         </footer>
       </div>
     </main>
