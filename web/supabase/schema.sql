@@ -1,3 +1,4 @@
+
 create type content_kind as enum ('blog_outline', 'social_caption', 'email_newsletter');
 create type brand_voice as enum ('professional', 'casual', 'friendly');
 create type content_status as enum ('draft', 'published', 'discarded');
@@ -139,13 +140,17 @@ grant select on prompt_template to authenticated;
 grant select, insert, delete on generation_lock to authenticated;
 
 
+-- Image generation daily quota
+-- Uses the existing production database column names.
+-- Daily limit: 3 images per user, based on Melbourne time.
+
 create table image_generation_usage (
   user_id uuid not null references auth.users (id) on delete cascade,
-  day date not null,
-  used smallint not null default 0,
-  updated_at timestamptz not null default now(),
-  primary key (user_id, day),
-  constraint image_generation_usage_non_negative check (used >= 0)
+  usage_date date not null,
+  generation_count integer not null default 0,
+  primary key (user_id, usage_date),
+  constraint image_generation_usage_non_negative
+    check (generation_count >= 0)
 );
 
 alter table image_generation_usage enable row level security;
@@ -162,22 +167,29 @@ security definer
 set search_path = public
 as $$
 declare
-  daily_limit constant integer := 3;
-  remaining smallint;
+  current_user_id uuid := auth.uid();
+  today_melbourne date :=
+    (now() at time zone 'Australia/Melbourne')::date;
+  updated_count integer;
 begin
-  if auth.uid() is null then
-    raise exception 'consume_image_generation needs a signed-in user';
+  if current_user_id is null then
+    raise exception 'Authentication required';
   end if;
 
-  insert into image_generation_usage (user_id, day, used)
-  values (auth.uid(), (now() at time zone 'utc')::date, 1)
-  on conflict (user_id, day) do update
-    set used = image_generation_usage.used + 1,
-        updated_at = now()
-    where image_generation_usage.used < daily_limit
-  returning used into remaining;
+  insert into public.image_generation_usage (
+    user_id,
+    usage_date,
+    generation_count
+  )
+  values (current_user_id, today_melbourne, 1)
+  on conflict (user_id, usage_date)
+  do update
+    set generation_count =
+      public.image_generation_usage.generation_count + 1
+    where public.image_generation_usage.generation_count < 3
+  returning generation_count into updated_count;
 
-  return remaining is not null;
+  return found;
 end;
 $$;
 
@@ -187,17 +199,24 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  current_user_id uuid := auth.uid();
+  today_melbourne date :=
+    (now() at time zone 'Australia/Melbourne')::date;
 begin
-  update image_generation_usage
-     set used = greatest(used - 1, 0),
-         updated_at = now()
-   where user_id = auth.uid()
-     and day = (now() at time zone 'utc')::date;
+  if current_user_id is null then
+    raise exception 'Authentication required';
+  end if;
+
+  update public.image_generation_usage
+  set generation_count = greatest(generation_count - 1, 0)
+  where user_id = current_user_id
+    and usage_date = today_melbourne;
 end;
 $$;
 
 revoke all on function consume_image_generation() from public, anon;
 revoke all on function refund_image_generation() from public, anon;
+
 grant execute on function consume_image_generation() to authenticated;
 grant execute on function refund_image_generation() to authenticated;
-

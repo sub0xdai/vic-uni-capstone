@@ -1,62 +1,67 @@
-
-create table image_generation_usage (
-  user_id uuid not null references auth.users (id) on delete cascade,
-  day date not null,
-  used smallint not null default 0,
-  updated_at timestamptz not null default now(),
-  primary key (user_id, day),
-  constraint image_generation_usage_non_negative check (used >= 0)
+CREATE TABLE IF NOT EXISTS public.image_generation_usage (
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    usage_date date NOT NULL,
+    generation_count integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, usage_date)
 );
 
-alter table image_generation_usage enable row level security;
+CREATE OR REPLACE FUNCTION public.consume_image_generation()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+    current_user_id uuid := auth.uid();
+    today_melbourne date :=
+        (now() AT TIME ZONE 'Australia/Melbourne')::date;
+    updated_count integer;
+BEGIN
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
 
-create policy image_generation_usage_select on image_generation_usage
-  for select to authenticated using (auth.uid() = user_id);
+    INSERT INTO public.image_generation_usage (
+        user_id,
+        usage_date,
+        generation_count
+    )
+    VALUES (current_user_id, today_melbourne, 1)
+    ON CONFLICT (user_id, usage_date)
+    DO UPDATE
+    SET generation_count =
+        public.image_generation_usage.generation_count + 1
+    WHERE public.image_generation_usage.generation_count < 3
+    RETURNING generation_count INTO updated_count;
 
-grant select on image_generation_usage to authenticated;
+    RETURN FOUND;
+END;
+$function$;
 
-create or replace function consume_image_generation()
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  daily_limit constant integer := 3;
-  remaining smallint;
-begin
-  if auth.uid() is null then
-    raise exception 'consume_image_generation needs a signed-in user';
-  end if;
+CREATE OR REPLACE FUNCTION public.refund_image_generation()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+    current_user_id uuid := auth.uid();
+    today_melbourne date :=
+        (now() AT TIME ZONE 'Australia/Melbourne')::date;
+BEGIN
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
 
-  insert into image_generation_usage (user_id, day, used)
-  values (auth.uid(), (now() at time zone 'utc')::date, 1)
-  on conflict (user_id, day) do update
-    set used = image_generation_usage.used + 1,
-        updated_at = now()
-    where image_generation_usage.used < daily_limit
-  returning used into remaining;
+    UPDATE public.image_generation_usage
+    SET generation_count = GREATEST(generation_count - 1, 0)
+    WHERE user_id = current_user_id
+      AND usage_date = today_melbourne;
+END;
+$function$;
 
-  return remaining is not null;
-end;
-$$;
+REVOKE ALL ON FUNCTION public.consume_image_generation() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.consume_image_generation() TO authenticated;
 
-create or replace function refund_image_generation()
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  update image_generation_usage
-     set used = greatest(used - 1, 0),
-         updated_at = now()
-   where user_id = auth.uid()
-     and day = (now() at time zone 'utc')::date;
-end;
-$$;
-
-revoke all on function consume_image_generation() from public, anon;
-revoke all on function refund_image_generation() from public, anon;
-grant execute on function consume_image_generation() to authenticated;
-grant execute on function refund_image_generation() to authenticated;
+REVOKE ALL ON FUNCTION public.refund_image_generation() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.refund_image_generation() TO authenticated;
