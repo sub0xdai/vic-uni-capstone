@@ -21,6 +21,7 @@ This file covers what the application needs, how it is put together, and what th
 | `SUPABASE_SERVICE_ROLE_KEY` | administrative work only, such as deleting test accounts | nothing in the app reads it |
 | `CLOUDFLARE_ACCOUNT_ID` | image generation | the image generator answers that it is not configured, and the reason is logged with the variable name |
 | `CLOUDFLARE_API_TOKEN` | image generation | the same |
+| `NEXT_PUBLIC_SITE_URL` | the canonical address in the page metadata, `robots.txt` and the sitemap | defaults to `https://aicontentpro-zeta.vercel.app` |
 
 The two public variables have to be written out in full where the browser reads them, because the build only inlines a public value it can see literally.
 Reading one by name returns nothing in the browser and works on the server, which is a bug that already cost a day.
@@ -36,6 +37,8 @@ Reading one by name returns nothing in the browser and works on the server, whic
 | `/dashboard` | Draft list with a status filter and counts, star ratings, mark ready and discard, the monthly usage and the latest quality score |
 | `/draft/[id]` | One saved draft: a format preview, the text with its live budget, its quality report with the reason for each failed check, the prompt that produced it, mark ready, discard, edit and rate |
 | `/preview` | Every component with fake data, no database and no login |
+| `/robots.txt` | Crawl rules: the public page is allowed, the app routes, the API and `/preview` are disallowed |
+| `/sitemap.xml` | One entry, the public home page |
 | `/api/generate` | Generates a draft through the provider port, scores it and saves it |
 | `/api/generate-image` | Reserves one of the three daily images, calls Cloudflare, and gives the reservation back when the call fails |
 

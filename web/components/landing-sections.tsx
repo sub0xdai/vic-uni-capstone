@@ -86,6 +86,7 @@ const PLANS = [
       "Dashboard with draft history",
     ],
     action: "Get Started Free",
+    href: "/login",
   },
   {
     name: "Pro",
@@ -100,6 +101,7 @@ const PLANS = [
       "Export tools",
     ],
     action: "Upgrade to Pro",
+    href: "/login",
   },
   {
     name: "Team",
@@ -114,6 +116,7 @@ const PLANS = [
       "Priority support",
     ],
     action: "Contact Sales",
+    href: "#contact",
   },
 ];
 
@@ -123,6 +126,8 @@ const STATS = [
   { icon: ImageIcon, value: "3 a day", label: "Images on the free plan" },
   { icon: Globe, value: "100% web", label: "Nothing to install" },
 ];
+
+const CONTACT_URL = "https://github.com/sub0xdai/vic-uni-capstone/issues";
 
 const STEP_LINE =
   "absolute left-[16%] right-[16%] top-5 hidden border-t border-dashed " +
@@ -216,7 +221,7 @@ export function PricingSection() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
-        {PLANS.map(({ name, price, note, highlight, items, action }) => (
+        {PLANS.map(({ name, price, note, highlight, items, action, href }) => (
           <div
             key={name}
             className={`relative flex h-full flex-col rounded-xl bg-white p-6 ${
@@ -245,10 +250,7 @@ export function PricingSection() {
               ))}
             </ul>
 
-            <Link
-              href={name === "Team" ? "#about" : "/login"}
-              className={highlight ? PRIMARY_BUTTON : OUTLINE_BUTTON}
-            >
+            <Link href={href} className={highlight ? PRIMARY_BUTTON : OUTLINE_BUTTON}>
               {action}
             </Link>
           </div>
@@ -275,6 +277,16 @@ export function AboutSection() {
               Each draft arrives with a quality score and the reason behind every failed check,
               so the owner can see what is weak before it is published. Less time writing
               marketing copy, more time running the business.
+            </p>
+            <p id="contact" className="mt-4 scroll-mt-24 text-[12px] leading-5 text-[#475569]">
+              Questions, a bug, or the Team plan: open an issue at{" "}
+              <a
+                href={CONTACT_URL}
+                className="font-semibold text-[#1a65f2] underline hover:text-[#1552c4]"
+              >
+                github.com/sub0xdai/vic-uni-capstone
+              </a>
+              .
             </p>
           </div>
 

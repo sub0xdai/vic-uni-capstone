@@ -153,7 +153,7 @@ function BrandMark() {
       width={128}
       height={128}
       priority
-      className="h-8 w-8"
+      className="h-8 w-auto object-contain"
     />
   );
 }
