@@ -9,13 +9,13 @@ Each draft comes back scored on five measures, so the owner can see what is weak
 
 Capstone project for NIT3003 and NIT3004 at Victoria University.
 The proposal and the design are written and marked.
-The application is built and runs against a live database.
-There is no public deployment yet.
+The application is built, runs against a live database, and is deployed at <https://aicontentpro-zeta.vercel.app>.
 
 ## What it does
 
 - A brand profile per business, with one account kept apart from every other by the database.
 - Three content types: blog outline, social media caption and email newsletter.
+- An image from a written description, three a day.
 - Generation through Gemini, capped at twenty drafts a month, with one generation at a time per account.
 - An editor with copy, a star rating, and mark ready or discard.
 - A quality report on every draft: readability, tone, keyword coverage, structure and the owner's satisfaction, weighted into one score, with the reason behind each failed check.
@@ -28,9 +28,14 @@ There is no public deployment yet.
 | Application | Next.js 16, React 19, TypeScript, Tailwind 4 | one deployable, server rendering by default |
 | Data and login | Supabase: Postgres, auth, row level security | tenancy enforced by the database instead of by every query |
 | Generation | Gemini, behind a provider port | the vendor is configuration, and the build has already outlived one |
+| Images | Cloudflare FLUX.1 Schnell, capped at three a day | the same port idea, a second vendor that holds no share of the text budget |
+| Hosting | Vercel | the API routes need a Node host, so a static host cannot serve the application |
 | Command line tools | Go, standard library only | the evaluation and tenancy probes are small and need no dependencies |
 
 ## Run it
+
+To use the deployed site, open <https://aicontentpro-zeta.vercel.app>.
+The rest of this section runs it on your own machine.
 
 Node 20.9 or newer, and pnpm.
 
@@ -57,6 +62,7 @@ cd tools/tenancy && go test ./...
 
 `pnpm check` runs the type check, the lint and the test suite.
 There is no CI, so it runs on the machine before a pull request.
+A push to `master` also builds on Vercel, which reports a broken build after the fact instead of blocking the merge.
 
 ## Where everything else lives
 
@@ -67,21 +73,26 @@ There is no CI, so it runs on the machine before a pull request.
 | `docs/design/` | the architecture, the evaluation experiment and the answer to the instructor's feedback |
 | `docs/plan/` | the board, the card briefs, the working agreements and the tenancy check |
 | `docs/diary/` | the progress diary, one folder per person |
+| `docs/manual/` | the user manual sections, written for the business owner rather than the team |
 | `tools/evaluation/` | the Go program behind the evaluation experiment |
 | `tools/tenancy/` | the Go probe that proves the isolation rules on any project |
 | `scrub.py`, `.githooks/` | the pre-commit scan for secrets and personal data |
 
 ## Status
 
-Working: accounts and login, the brand profile, generation for all three content types, the editor, the dashboard, the quality score and the monthly cost.
+Working: accounts and login, the brand profile, generation for all three content types, image generation on a daily allowance, the editor, the dashboard, the quality score and the monthly cost.
 
 The database exists with the schema applied, and the isolation rules were verified on the live project with two accounts: an unfiltered read returns one row each, nothing comes back without a token, a cross-tenant insert is refused with 403, and a cross-tenant update changes nothing.
 `docs/plan/tenancy-check.md` records the run and what it did not cover.
 
+The site is deployed at <https://aicontentpro-zeta.vercel.app>, from `master` at the merge of PR 85.
+What is proven on that host: `/login` and `/preview` render, `/` and `/dashboard` send a signed-out visitor to `/login`, and both API routes answer a signed-out request with 401, which shows their database configuration resolved.
+Nobody has signed in and generated a draft there yet.
+
 Still open, tracked in `docs/plan/build-plan.md`:
 
-- A deployment. There is no public URL yet, so nothing in this repository is proven end to end on a public host.
-- An API key for generation on a deployed build.
+- An image generation key on the deployed build. `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are unset, so the image panel answers that it is not configured. Text generation works.
+- The Supabase sign-up confirmation links still point at `localhost` until the deployment's domain is added in Authentication, URL Configuration.
 - The evaluation experiment: drafts rated by people outside the build, and an agreement statistic against the computed score.
 - A load test against the non-functional requirements, seven of which are honestly unmeasured.
 

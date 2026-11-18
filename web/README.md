@@ -29,17 +29,38 @@ Reading one by name returns nothing in the browser and works on the server, whic
 
 | Route | What it does |
 |---|---|
-| `/` | Sends you to `/dashboard` when signed in, otherwise to `/login` |
+| `/` | The public home page: headline, feature strip and an example generator the visitor can click. A signed-in visitor is sent to `/dashboard` |
 | `/login` | Sign in, or create an account |
 | `/onboarding` | Create or edit the business profile |
-| `/generate` | Pick a content type, enter a topic and keywords, generate, edit, copy, rate. Reuse a saved draft to start with its inputs |
+| `/generate` | Pick a content type, enter a topic and keywords, generate, edit, copy, rate. Reuse a saved draft to start with its inputs. The image mode asks for a description instead and returns a picture to download |
 | `/dashboard` | Draft list with a status filter and counts, star ratings, mark ready and discard, the monthly usage and the latest quality score |
 | `/draft/[id]` | One saved draft: a format preview, the text with its live budget, its quality report with the reason for each failed check, the prompt that produced it, mark ready, discard, edit and rate |
 | `/preview` | Every component with fake data, no database and no login |
-| `/api/generate` | The only server route. Generates through the provider port, scores the draft and saves it |
+| `/api/generate` | Generates a draft through the provider port, scores it and saves it |
+| `/api/generate-image` | Reserves one of the three daily images, calls Cloudflare, and gives the reservation back when the call fails |
 
 `proxy.ts` guards `/dashboard`, `/onboarding`, `/generate` and `/draft`.
 A signed out request goes to `/login`, and a signed in request for `/login` goes to `/dashboard`.
+
+## Deployment
+
+The production site is <https://aicontentpro-zeta.vercel.app>.
+`aicontentpro-sub0x-projects.vercel.app` and `aicontentpro-git-master-sub0x-projects.vercel.app` serve the same build.
+
+The Vercel project is `aicontentpro`, with Root Directory `web` and pnpm read from `pnpm-lock.yaml`.
+Every push to `master` builds automatically, so a broken build is reported after the merge rather than before it.
+
+The variables in the table above are set on the Vercel project, not in the repository.
+The two `NEXT_PUBLIC_*` values are inlined at build time, so a build that runs before they exist produces a site that redirects to `/login` forever.
+
+Two things a fresh deployment still needs:
+
+1. In Supabase, Authentication, URL Configuration, the Site URL and the redirect allow list must name the deployed domain.
+   Otherwise a sign-up confirmation link points at `localhost:3000` and a new account cannot finish.
+2. `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, or the image generator answers that it is not configured.
+
+The image route waits up to ninety seconds for Cloudflare and refunds its reservation in a `finally`.
+A host that kills the function before that refund runs costs the owner one of the three daily images.
 
 ## Data
 
@@ -97,9 +118,9 @@ The Go tools are checked separately, with `go test ./...` in each tool's folder.
 ## Layout
 
 ```
-app/           routes, one folder per page, plus api/generate
+app/           routes, one folder per page, plus api/generate and api/generate-image
 components/    the pieces those pages render
-lib/           types, parsers, scoring, env, prompts, the generator port, its Gemini adapter, Supabase clients
+lib/           types, parsers, scoring, env, prompts, the generator port, its Gemini adapter, the image prompt rules, Supabase clients
 supabase/      schema.sql and the dated migrations
 proxy.ts       the session guard
 ```
