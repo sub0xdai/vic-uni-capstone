@@ -19,6 +19,8 @@ This file covers what the application needs, how it is put together, and what th
 | `GENERATOR_MODEL` | the model the request names | defaults to `gemini-3.5-flash-lite`; `GEMINI_MODEL` is still read as the older alias |
 | `GENERATOR_BASE_URL` | the endpoint | defaults to Google's |
 | `SUPABASE_SERVICE_ROLE_KEY` | administrative work only, such as deleting test accounts | nothing in the app reads it |
+| `CLOUDFLARE_ACCOUNT_ID` | image generation | the image generator answers that it is not configured, and the reason is logged with the variable name |
+| `CLOUDFLARE_API_TOKEN` | image generation | the same |
 
 The two public variables have to be written out in full where the browser reads them, because the build only inlines a public value it can see literally.
 Reading one by name returns nothing in the browser and works on the server, which is a bug that already cost a day.
@@ -49,6 +51,7 @@ An existing project takes the dated files instead, in this order, each pasted in
 2. `2026-11-04-model-rate-policy.sql` adds the read policy `model_rate` needs.
 3. `2026-11-05-prompt-template.sql` adds the `prompt_template` table and the `prompt_version` column.
 4. `2026-11-05-generation-lock.sql` adds `generation_lock`.
+5. `2026-11-18-image-generation.sql` adds `image_generation_usage` and the two quota functions.
 
 Without the prompt template migration, a generation cannot save its draft.
 Without the lock migration, every generation request answers that it could not start.

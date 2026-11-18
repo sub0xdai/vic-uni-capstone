@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
-import { MissingEnvError } from "@/lib/env";
+import { MissingEnvError, optionalEnv } from "@/lib/env";
+import { imageDataUrl, parseImagePrompt } from "@/lib/image";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -8,8 +9,28 @@ export const runtime = "nodejs";
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const LOCK_TTL_MS = 90_000;
 
+type QueryClient = Awaited<ReturnType<typeof supabaseServer>>;
+
+type QuotaResult = "reserved" | "limit" | "failed";
+
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
+}
+
+async function reserveQuota(supabase: QueryClient): Promise<QuotaResult> {
+  const { data, error } = await supabase.rpc("consume_image_generation");
+  if (error !== null) {
+    console.error(`Could not reserve an image generation: ${error.message}`);
+    return "failed";
+  }
+  return data === true ? "reserved" : "limit";
+}
+
+async function refundQuota(supabase: QueryClient): Promise<void> {
+  const { error } = await supabase.rpc("refund_image_generation");
+  if (error !== null) {
+    console.error(`Could not refund an image generation: ${error.message}`);
+  }
 }
 
 export async function POST(request: Request) {
@@ -25,17 +46,13 @@ export async function POST(request: Request) {
     return fail("Request body must be an object.", 400);
   }
 
-  const prompt = (body as Record<string, unknown>).prompt;
-
-  if (typeof prompt !== "string" || prompt.trim().length === 0) {
-    return fail("Please enter an image description.", 400);
+  const parsedPrompt = parseImagePrompt((body as Record<string, unknown>).prompt);
+  if (!parsedPrompt.ok) {
+    return fail(parsedPrompt.error, 400);
   }
+  const prompt = parsedPrompt.value;
 
-  if (prompt.trim().length > 2048) {
-    return fail("Image description must be 2048 characters or fewer.", 400);
-  }
-
-  let supabase;
+  let supabase: QueryClient;
 
   try {
     supabase = await supabaseServer();
@@ -80,26 +97,32 @@ export async function POST(request: Request) {
     return fail("Image generation could not start.", 500);
   }
 
-  try {
-    const { data: allowed, error: usageError } = await supabase.rpc(
-      "consume_image_generation"
-    );
+  let reserved = false;
+  let delivered = false;
 
-    if (usageError !== null) {
-      console.error("Could not check image generation allowance.");
+  try {
+    const accountId = optionalEnv("CLOUDFLARE_ACCOUNT_ID");
+    const apiToken = optionalEnv("CLOUDFLARE_API_TOKEN");
+
+    if (accountId === null || apiToken === null) {
+      console.error(
+        "Image generation is not configured: " +
+          "CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing",
+      );
+      return fail("Image generation is not configured.", 500);
+    }
+
+    const quota = await reserveQuota(supabase);
+
+    if (quota === "failed") {
       return fail("Could not check your daily image limit.", 500);
     }
 
-    if (allowed !== true) {
+    if (quota === "limit") {
       return fail("You've reached your limit of 3 images today. Try again tomorrow.", 429);
     }
 
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-
-    if (!accountId || !apiToken) {
-      return fail("Image generation is not configured.", 500);
-    }
+    reserved = true;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90_000);
@@ -116,7 +139,7 @@ export async function POST(request: Request) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            prompt: prompt.trim(),
+            prompt,
             steps: 4,
           }),
           signal: controller.signal,
@@ -138,19 +161,28 @@ export async function POST(request: Request) {
       result?: { image?: string };
     };
 
-    if (result.success !== true || typeof result.result?.image !== "string") {
+    if (
+      result.success !== true ||
+      typeof result.result?.image !== "string" ||
+      result.result.image.length === 0
+    ) {
       console.error("Cloudflare returned an unusable image response.");
       return fail("The image service returned an invalid result.", 502);
     }
 
+    delivered = true;
     return NextResponse.json({
-      imageDataUrl: `data:image/jpeg;base64,${result.result.image}`,
-      prompt: prompt.trim(),
+      imageDataUrl: imageDataUrl(result.result.image),
+      prompt,
     });
   } catch (error) {
     console.error("Image generation request failed:", error);
     return fail("An unexpected image generation error occurred.", 500);
   } finally {
+    if (reserved && !delivered) {
+      await refundQuota(supabase);
+    }
+
     const { error } = await supabase
       .from("generation_lock")
       .delete()
@@ -161,4 +193,3 @@ export async function POST(request: Request) {
     }
   }
 }
-

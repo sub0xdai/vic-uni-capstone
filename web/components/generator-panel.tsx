@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -97,24 +96,6 @@ export function GeneratorPanel({
     setSelectedMode(mode);
 
     if (mode !== "image_generation") {
-      onChange({
-        ...value,
-        contentType: mode,
-      });
-    }
-  }
-
-  const isMediaMode =
-    selectedMode === "image_generation" ||
-    selectedMode === "video_generation";
-
-  function selectMode(mode: GeneratorMode) {
-    setSelectedMode(mode);
-
-    if (
-      mode !== "image_generation" &&
-      mode !== "video_generation"
-    ) {
       onChange({
         ...value,
         contentType: mode,
