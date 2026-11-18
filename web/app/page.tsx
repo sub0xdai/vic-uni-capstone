@@ -15,21 +15,21 @@ import {
   Workflow,
 } from "lucide-react";
 
+import { LandingNavLinks } from "@/components/landing-nav-links";
 import { LandingPreview } from "@/components/landing-preview";
+import {
+  AboutSection,
+  CallToAction,
+  FeaturesSection,
+  HowItWorksSection,
+  PricingSection,
+} from "@/components/landing-sections";
 import { optionalEnv } from "@/lib/env";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const CONTAINER = "mx-auto w-full max-w-[1140px] px-5";
-
-const NAV_LINKS = [
-  { label: "Home", href: "#top", active: true },
-  { label: "Features", href: "#features", active: false },
-  { label: "How It Works", href: "#preview", active: false },
-  { label: "Pricing", href: "#pricing", active: false },
-  { label: "About", href: "#about", active: false },
-];
 
 const SAMPLES = [
   { label: "Social Media Posts", icon: MessageSquare, position: "left-0 top-1" },
@@ -48,9 +48,6 @@ const FEATURES = [
 const GLOW =
   "bg-[radial-gradient(circle,rgba(59,130,246,0.22)_0%,rgba(59,130,246,0)_70%)]";
 
-const NAV_LINK =
-  "border-b-2 border-transparent pb-0.5 text-[13px] font-semibold transition";
-
 const NAV_LOGIN =
   "rounded-lg border border-[#1a65f2] bg-white px-3.5 py-1.5 text-[13px] " +
   "font-semibold text-[#1a65f2] transition hover:bg-[#eaf1ff]";
@@ -59,7 +56,8 @@ const NAV_SIGNUP =
   "rounded-lg bg-[#1a65f2] px-3.5 py-1.5 text-[13px] font-semibold text-white " +
   "transition hover:bg-[#1552c4]";
 
-const HERO_SECTION = `${CONTAINER} grid items-center gap-8 py-8 lg:grid-cols-[1fr_420px] lg:py-9`;
+const HERO_SECTION =
+  `${CONTAINER} grid scroll-mt-20 items-center gap-8 py-8 lg:grid-cols-[1fr_420px] lg:py-9`;
 
 const PRIMARY_ACTION =
   "inline-flex items-center gap-2 rounded-lg bg-[#1a65f2] px-4 py-2.5 text-sm " +
@@ -111,6 +109,11 @@ export default async function Home() {
       <section id="preview" className={`${CONTAINER} pb-8`}>
         <LandingPreview />
       </section>
+      <FeaturesSection />
+      <HowItWorksSection />
+      <PricingSection />
+      <AboutSection />
+      <CallToAction />
       <LandingFooter />
     </div>
   );
@@ -118,7 +121,7 @@ export default async function Home() {
 
 function LandingNav() {
   return (
-    <header className="border-b border-[#e2e8f0] bg-white">
+    <header className="sticky top-0 z-50 border-b border-[#e2e8f0] bg-white/95 backdrop-blur">
       <div className={`${CONTAINER} flex items-center gap-6 py-2.5`}>
         <Link href="/" className="flex shrink-0 items-center gap-1.5">
           <BrandMark />
@@ -127,25 +130,7 @@ function LandingNav() {
           </span>
         </Link>
 
-        <nav aria-label="Sections" className="hidden md:block">
-          <ul className="flex items-center gap-6">
-            {NAV_LINKS.map(({ label, href, active }) => (
-              <li key={label}>
-                <a
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={`${NAV_LINK} ${
-                    active
-                      ? "border-[#1a65f2] text-[#1a65f2]"
-                      : "text-[#64748b] hover:text-[#0f172a]"
-                  }`}
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <LandingNavLinks />
 
         <div className="ml-auto flex items-center gap-2">
           <Link href="/login" className={NAV_LOGIN}>
@@ -175,7 +160,7 @@ function BrandMark() {
 
 function Hero() {
   return (
-    <section className={HERO_SECTION}>
+    <section id="home" className={HERO_SECTION}>
       <div>
         <span className={HERO_BADGE}>
           <Sparkles className="h-3 w-3" />
@@ -241,7 +226,7 @@ function HeroArt() {
 
 function FeatureStrip() {
   return (
-    <section id="features" className={`${CONTAINER} pb-6`}>
+    <section className={`${CONTAINER} pb-6`}>
       <div className={FEATURE_CARD}>
         {FEATURES.map(({ label, icon: Icon, detail }) => (
           <div key={label} className="flex items-start gap-2.5">
@@ -262,13 +247,7 @@ function FeatureStrip() {
 function LandingFooter() {
   return (
     <footer className={FOOTER}>
-      <span id="pricing">Pricing: no paid plans</span>
-      <span aria-hidden="true"> · </span>
-      <span id="about">
-        About: the NIT3003 and NIT3004 capstone team at Victoria University
-      </span>
-      <span aria-hidden="true"> · </span>
-      <span>© 2026 ContentCraft</span>
+      <span>© 2026 ContentCraft. A Victoria University capstone project.</span>
     </footer>
   );
 }

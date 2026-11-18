@@ -29,7 +29,7 @@ Reading one by name returns nothing in the browser and works on the server, whic
 
 | Route | What it does |
 |---|---|
-| `/` | The public home page: headline, feature strip and an example generator the visitor can click. A signed-in visitor is sent to `/dashboard` |
+| `/` | The public home page: hero, feature strip, an example generator the visitor can click, and Features, How It Works, Pricing and About sections. A signed-in visitor is sent to `/dashboard` |
 | `/login` | Sign in, or create an account |
 | `/onboarding` | Create or edit the business profile |
 | `/generate` | Pick a content type, enter a topic and keywords, generate, edit, copy, rate. Reuse a saved draft to start with its inputs. The image mode asks for a description instead and returns a picture to download |
