@@ -85,13 +85,11 @@ Working: accounts and login, the brand profile, generation for all three content
 The database exists with the schema applied, and the isolation rules were verified on the live project with two accounts: an unfiltered read returns one row each, nothing comes back without a token, a cross-tenant insert is refused with 403, and a cross-tenant update changes nothing.
 `docs/plan/tenancy-check.md` records the run and what it did not cover.
 
-The site is deployed at <https://aicontentpro-zeta.vercel.app>, from `master` at the merge of PR 85.
-What is proven on that host: `/login` and `/preview` render, `/` and `/dashboard` send a signed-out visitor to `/login`, and both API routes answer a signed-out request with 401, which shows their database configuration resolved.
-Nobody has signed in and generated a draft there yet.
+The site is deployed at <https://aicontentpro-zeta.vercel.app>.
+What is proven on that host: `/login` and `/preview` render, `/` and `/dashboard` send a signed-out visitor to `/login`, both API routes answer a signed-out request with 401, which shows their database configuration resolved, and a signed-in account generated an image through the image panel on 19 November.
 
 Still open, tracked in `docs/plan/build-plan.md`:
 
-- An image generation key on the deployed build. `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are unset, so the image panel answers that it is not configured. Text generation works.
 - The Supabase sign-up confirmation links still point at `localhost` until the deployment's domain is added in Authentication, URL Configuration.
 - The evaluation experiment: drafts rated by people outside the build, and an agreement statistic against the computed score.
 - A load test against the non-functional requirements, seven of which are honestly unmeasured.
