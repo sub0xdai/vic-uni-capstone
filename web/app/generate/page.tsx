@@ -167,7 +167,6 @@ function GenerateScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [note, setNote] = useState<Note | null>(null);
 
-  // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
   const [imagePending, setImagePending] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -198,7 +197,6 @@ function GenerateScreen() {
     };
   }, []);
 
-  // Existing Gemini text generation
   async function generate() {
     if (inFlight.current) {
       return;
@@ -257,7 +255,6 @@ function GenerateScreen() {
     }
   }
 
-  // Cloudflare FLUX image generation
   async function generateImage() {
     if (imageInFlight.current || imagePrompt.trim().length === 0) {
       return;
@@ -323,7 +320,6 @@ function GenerateScreen() {
     }
   }
 
-  // Existing draft saving
   async function save(text: string) {
     if (draft === null) {
       return;
@@ -389,7 +385,6 @@ function GenerateScreen() {
     );
   }
 
-  // Existing draft rating
   async function rate(rating: number) {
     if (draft === null) {
       return;
@@ -449,7 +444,8 @@ function GenerateScreen() {
 
         <section className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em]
+              text-blue-600">
               <span className="h-2 w-2 rounded-full bg-blue-600" />
               Content creation studio
             </div>
@@ -466,7 +462,9 @@ function GenerateScreen() {
 
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white
+              px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition
+              hover:border-blue-200 hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to dashboard
@@ -479,10 +477,12 @@ function GenerateScreen() {
 
           {/* Generator panel */}
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm
+            transition-shadow hover:shadow-md">
             <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50
+                  text-blue-600">
                   <WandSparkles className="h-5 w-5" />
                 </div>
 
@@ -525,7 +525,8 @@ function GenerateScreen() {
 
             <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50
+                  text-indigo-600">
                   <Building2 className="h-5 w-5" />
                 </div>
 
@@ -608,7 +609,8 @@ function GenerateScreen() {
 
               <div className="mt-5 space-y-5">
                 <div className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                    bg-blue-50 text-xs font-bold text-blue-600">
                     1
                   </span>
 
@@ -624,7 +626,8 @@ function GenerateScreen() {
                 </div>
 
                 <div className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                    bg-blue-50 text-xs font-bold text-blue-600">
                     2
                   </span>
 
@@ -640,7 +643,8 @@ function GenerateScreen() {
                 </div>
 
                 <div className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full
+                    bg-blue-50 text-xs font-bold text-blue-600">
                     3
                   </span>
 
@@ -659,7 +663,8 @@ function GenerateScreen() {
 
             {/* Creative media information */}
 
-            <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50
+              to-white p-6 shadow-sm">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-blue-600" />
 
@@ -683,7 +688,8 @@ function GenerateScreen() {
                   Powered by Cloudflare FLUX.1 Schnell.
                 </p>
 
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3
+                  py-1.5 text-xs font-semibold text-emerald-700">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Daily limit: 3 images
                 </div>
@@ -695,10 +701,13 @@ function GenerateScreen() {
         {/* Generated image preview */}
 
         {generatedImage !== null && (
-          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5 sm:px-8">
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white
+            shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b
+              border-slate-100 px-6 py-5 sm:px-8">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50
+                  text-blue-600">
                   <ImageIcon className="h-5 w-5" />
                 </div>
 
@@ -716,7 +725,8 @@ function GenerateScreen() {
               <a
                 href={generatedImage}
                 download="contentcraft-generated-image.jpg"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs
+                  font-bold text-white transition hover:bg-blue-700"
               >
                 <Download className="h-4 w-4" />
                 Download image
@@ -762,10 +772,12 @@ function GenerateScreen() {
         {/* Generated draft editor */}
 
         {draft === null ? null : (
-          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white
+            shadow-sm">
             <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50
+                  text-emerald-600">
                   <FileText className="h-5 w-5" />
                 </div>
 

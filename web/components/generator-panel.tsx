@@ -175,7 +175,9 @@ export function GeneratorPanel({
                 disabled={pending || imagePending}
                 aria-pressed={selected}
                 onClick={() => selectMode(option.id)}
-                className={`group relative flex min-h-[140px] flex-col items-start rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
+                className={`group relative flex min-h-[140px] flex-col items-start rounded-2xl
+                  border p-4 text-left transition-all duration-200 hover:-translate-y-0.5
+                  hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
                   selected
                     ? "border-blue-500 bg-blue-50 shadow-sm ring-2 ring-blue-100"
                     : "border-slate-200 bg-white hover:border-blue-300"
@@ -183,7 +185,8 @@ export function GeneratorPanel({
               >
                 <div className="flex w-full items-start justify-between">
                   <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl
+                      transition-colors ${
                       selected
                         ? "bg-blue-600 text-white"
                         : "bg-blue-50 text-blue-600 group-hover:bg-blue-100"
@@ -193,11 +196,13 @@ export function GeneratorPanel({
                   </div>
 
                   {selected ? (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full
+                      bg-blue-600 text-white">
                       <Sparkles className="h-3.5 w-3.5" />
                     </span>
                   ) : (
-                    <span className="h-6 w-6 rounded-full border border-slate-200 transition-colors group-hover:border-blue-300" />
+                    <span className="h-6 w-6 rounded-full border border-slate-200 transition-colors
+                      group-hover:border-blue-300" />
                   )}
                 </div>
 
@@ -215,7 +220,8 @@ export function GeneratorPanel({
                   </p>
                 </div>
 
-                <span className="absolute right-4 bottom-3 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                <span className="absolute right-4 bottom-3 text-[9px] font-semibold uppercase
+                  tracking-wider text-slate-400">
                   {option.category}
                 </span>
               </button>
@@ -228,9 +234,11 @@ export function GeneratorPanel({
 
       {selectedMode === "image_generation" ? (
         <section className="space-y-5">
-          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-5">
+          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white
+            p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600
+                text-white">
                 <ImageIcon className="h-5 w-5" />
               </div>
 
@@ -260,7 +268,9 @@ export function GeneratorPanel({
               value={imagePrompt}
               maxLength={2048}
               disabled={imagePending}
-              placeholder="Example: A premium product photograph of an Ethiopian coffee cup on a wooden table, warm natural lighting, elegant minimalist styling, professional commercial photography..."
+              placeholder="Example: A premium product photograph of an Ethiopian coffee cup on a
+                wooden table, warm natural lighting, elegant minimalist styling, professional
+                commercial photography..."
               onChange={(event) =>
                 onImagePromptChange(event.target.value)
               }
@@ -289,7 +299,8 @@ export function GeneratorPanel({
             {imagePending ? (
               <span className="flex items-center gap-2">
                 <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40
+                    border-t-white"
                   aria-hidden="true"
                 />
                 Creating your image...
@@ -377,7 +388,8 @@ export function GeneratorPanel({
                 {value.keywords.map((word) => (
                   <li
                     key={word}
-                    className="flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700"
+                    className="flex items-center gap-1 rounded-full border border-blue-100
+                      bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700"
                   >
                     {word}
 
@@ -386,7 +398,8 @@ export function GeneratorPanel({
                       aria-label={`Remove keyword ${word}`}
                       disabled={pending}
                       onClick={() => removeKeyword(word)}
-                      className="ml-1 rounded-full p-0.5 text-blue-500 transition hover:bg-blue-100 hover:text-red-600"
+                      className="ml-1 rounded-full p-0.5 text-blue-500 transition hover:bg-blue-100
+                        hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -428,7 +441,8 @@ export function GeneratorPanel({
             {pending ? (
               <span className="flex items-center gap-2">
                 <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40
+                    border-t-white"
                   aria-hidden="true"
                 />
                 Generating...
