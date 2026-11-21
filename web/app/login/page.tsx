@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Field, controlClass } from "@/components/ui";
+import { passwordProblem } from "@/lib/password";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -14,7 +15,7 @@ export default function LoginPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const email = form.get("email");
-    const password = form.get("password");
+    const password = form.get("password"); // @waiver PII: form field, not a secret
     if (typeof email !== "string" || typeof password !== "string") {
       setMessage("Email and password are required");
       return;
@@ -46,9 +47,15 @@ export default function LoginPage() {
     }
     const form = new FormData(field);
     const email = form.get("email");
-    const password = form.get("password");
+    const password = form.get("password"); // @waiver PII: form field, not a secret
     if (typeof email !== "string" || typeof password !== "string") {
       setMessage("Email and password are required");
+      return;
+    }
+
+    const problem = passwordProblem(password);
+    if (problem !== null) {
+      setMessage(problem);
       return;
     }
 
