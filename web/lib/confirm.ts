@@ -1,3 +1,5 @@
+export const DASHBOARD = "/dashboard";
+
 const REASONS: Record<string, string> = {
   missing: "That link had no code in it. Sign up again, or log in if your account works.",
   expired: "That link expired or was already used. Log in, or sign up again.",
@@ -9,4 +11,14 @@ export function confirmReason(value: string | null): string | null {
     return null;
   }
   return REASONS[value] ?? null;
+}
+
+export function safeNext(value: string | null): string {
+  if (value === null) {
+    return DASHBOARD;
+  }
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return DASHBOARD;
+  }
+  return value;
 }

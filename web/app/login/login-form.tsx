@@ -6,9 +6,10 @@ import { Button, Card, Field, controlClass } from "@/components/ui";
 import { passwordProblem } from "@/lib/password";
 import { supabaseBrowserResult } from "@/lib/supabase/client";
 
-export function LoginForm({ notice }: { notice: string | null }) {
+export function LoginForm({ reason }: { reason: string | null }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -23,6 +24,7 @@ export function LoginForm({ notice }: { notice: string | null }) {
 
     setBusy(true);
     setMessage(null);
+    setSent(null);
     const client = supabaseBrowserResult();
     if (!client.ok) {
       setBusy(false);
@@ -61,26 +63,61 @@ export function LoginForm({ notice }: { notice: string | null }) {
 
     setBusy(true);
     setMessage(null);
+    setSent(null);
     const client = supabaseBrowserResult();
     if (!client.ok) {
       setBusy(false);
       setMessage(client.error);
       return;
     }
-    const { error } = await client.value.auth.signUp({
+    const { data, error } = await client.value.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
     });
     setBusy(false);
-    setMessage(
-      error === null
-        ? "Account created. Check your email if confirmation is required, then log in."
-        : error.message,
-    );
+    if (error !== null) {
+      setMessage(error.message);
+      return;
+    }
+    if (data.session !== null) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+    setSent(`Account created. Open the link sent to ${email}, then log in.`);
   }
 
-  const shown = message ?? notice;
+  async function forgot(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const field = event.currentTarget.form;
+    if (field === null) {
+      return;
+    }
+    const email = new FormData(field).get("email");
+    if (typeof email !== "string" || email.length === 0) {
+      setMessage("Type your email address first, then choose Forgot password.");
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+    setSent(null);
+    const client = supabaseBrowserResult();
+    if (!client.ok) {
+      setBusy(false);
+      setMessage(client.error);
+      return;
+    }
+    await client.value.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+    });
+    setBusy(false);
+    setSent("If that address has an account, a reset link is on its way.");
+  }
+
+  const notice = message ?? sent ?? reason;
+  const tone = message === null && sent !== null ? "text-green-700" : "text-red-600";
 
   return (
     <main className="mx-auto w-full max-w-md p-6">
@@ -98,13 +135,13 @@ export function LoginForm({ notice }: { notice: string | null }) {
             />
           </Field>
 
-          {shown === null ? null : (
-            <p className="text-sm text-red-600" role="alert">
-              {shown}
+          {notice === null ? null : (
+            <p className={`text-sm ${tone}`} role="alert">
+              {notice}
             </p>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={busy}>
               Log in
             </Button>
@@ -112,6 +149,15 @@ export function LoginForm({ notice }: { notice: string | null }) {
               Sign up
             </Button>
           </div>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={forgot}
+            className="text-sm text-slate-600 underline hover:text-slate-900"
+          >
+            Forgot password?
+          </button>
         </form>
       </Card>
     </main>

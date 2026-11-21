@@ -7,5 +7,5 @@ export default async function LoginPage({
   searchParams: Promise<{ reason?: string }>;
 }) {
   const params = await searchParams;
-  return <LoginForm notice={confirmReason(params.reason ?? null)} />;
+  return <LoginForm reason={confirmReason(params.reason ?? null)} />;
 }
